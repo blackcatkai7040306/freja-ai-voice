@@ -1,5 +1,4 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { HumeClient } from 'hume';
 import { 
   ConversationState, 
   VoiceMessage, 
@@ -36,29 +35,8 @@ export const useVoiceChat = () => {
     stream: null,
   });
 
-  // Refs for managing audio and Hume client
+  // Refs for managing audio
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const humeClientRef = useRef<HumeClient | null>(null);
-
-  /**
-   * Initialize Hume AI client with API key
-   */
-  const initializeHume = useCallback(async () => {
-    try {
-      if (!process.env.NEXT_PUBLIC_HUME_API_KEY) {
-        throw new Error('Hume API key not found in environment variables');
-      }
-
-      humeClientRef.current = new HumeClient({
-        apiKey: process.env.NEXT_PUBLIC_HUME_API_KEY,
-      });
-
-      console.log('Hume client initialized successfully');
-    } catch (error) {
-      console.error('Failed to initialize Hume client:', error);
-      throw error;
-    }
-  }, []);
 
   /**
    * Start recording audio from user's microphone
@@ -152,18 +130,11 @@ export const useVoiceChat = () => {
    */
   const processAudioMessage = useCallback(async (audioBlob: Blob) => {
     try {
-      if (!humeClientRef.current) {
-        await initializeHume();
-      }
-
       setConversationState(prev => ({
         ...prev,
         isProcessing: true,
       }));
 
-      // Convert blob to ArrayBuffer for API
-      const arrayBuffer = await audioBlob.arrayBuffer();
-      
       // Create FormData for multipart upload
       const formData = new FormData();
       formData.append('audio', audioBlob, 'recording.webm');
@@ -175,7 +146,8 @@ export const useVoiceChat = () => {
       });
 
       if (!response.ok) {
-        throw new Error(`API request failed: ${response.statusText}`);
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        throw new Error(`API request failed (${response.status}): ${errorData.error || response.statusText}`);
       }
 
       const result: HumeApiResponse = await response.json();
@@ -215,9 +187,23 @@ export const useVoiceChat = () => {
         ...prev,
         isProcessing: false,
       }));
+      
+      // Add error message to conversation for user feedback
+      const errorMessage: VoiceMessage = {
+        id: `error-${Date.now()}`,
+        type: 'assistant',
+        content: `Sorry, I encountered an error: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        timestamp: new Date(),
+      };
+
+      setConversationState(prev => ({
+        ...prev,
+        messages: [...prev.messages, errorMessage],
+      }));
+
       throw error;
     }
-  }, [initializeHume, voiceSettings]);
+  }, [voiceSettings]);
 
   /**
    * Play audio response from Hume AI
@@ -279,13 +265,6 @@ export const useVoiceChat = () => {
       ...newSettings,
     }));
   }, []);
-
-  // Initialize Hume client on mount
-  useEffect(() => {
-    initializeHume().catch(error => {
-      console.error('Failed to initialize Hume on mount:', error);
-    });
-  }, [initializeHume]);
 
   return {
     conversationState,
