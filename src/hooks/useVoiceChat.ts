@@ -24,7 +24,7 @@ export const useVoiceChat = () => {
     speakerEnabled: true,
     volume: 0.8,
     autoPlay: true,
-    speechSpeed: 2, // 25% faster than normal
+    speechSpeed: 5, // 25% faster than normal
   });
 
   // Connection and audio state
