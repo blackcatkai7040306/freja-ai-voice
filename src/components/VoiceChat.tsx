@@ -224,47 +224,73 @@ export const VoiceChat: React.FC = () => {
       {/* Content with relative positioning to appear above background */}
       <div className="relative z-10 flex flex-col h-full">
         {/* Header */}
-        <div className="flex flex-col bg-gray-900/95 backdrop-blur-sm border-b border-gray-800/60">
-          {/* Top row with logo and connection status */}
-          <div className="flex items-center justify-between p-4 md:p-5">
-            <div className="flex items-center space-x-3 md:space-x-4">
-              <div className="w-12 h-12 md:w-14 md:h-14 flex items-center justify-center bg-gray-800/90 backdrop-blur-sm rounded-xl p-2 border border-gray-700 shadow-lg">
-                <Image
-                  src="/logo.png"
-                  alt="Freja AI Logo"
-                  width={48}
-                  height={48}
-                  className="w-full h-full object-contain"
-                  priority
-                />
-              </div>
-              
-              <div className="flex flex-col">
-                <h1 
-                  className="text-lg md:text-xl font-bold bg-gradient-to-r from-blue-300 to-purple-300 bg-clip-text text-transparent"
-                  style={{
-                    textShadow: '2px 2px 4px rgba(0,0,0,0.8)',
-                  }}
-                >
-                  Freja AI
-                </h1>
-                <span 
-                  className="text-xs md:text-sm font-medium"
-                  style={{
-                    color: isConnected ? '#86EFAC' : '#FCA5A5', // Force bright colors
-                    textShadow: '1px 1px 2px rgba(0,0,0,0.8)',
-                  }}
-                >
-                  {isConnected ? 'Connected & Ready' : 'Disconnected'}
-                </span>
-              </div>
+        <div className="flex items-center justify-between p-4 md:p-5 bg-gray-900/95 backdrop-blur-sm border-b border-gray-800/60">
+          <div className="flex items-center space-x-3 md:space-x-4">
+            <div className="w-12 h-12 md:w-14 md:h-14 flex items-center justify-center bg-gray-800/90 backdrop-blur-sm rounded-xl p-2 border border-gray-700 shadow-lg">
+              <Image
+                src="/logo.png"
+                alt="Freja AI Logo"
+                width={48}
+                height={48}
+                className="w-full h-full object-contain"
+                priority
+              />
             </div>
             
+            <div className="flex flex-col">
+              <h1 
+                className="text-lg md:text-xl font-bold bg-gradient-to-r from-blue-300 to-purple-300 bg-clip-text text-transparent"
+                style={{
+                  textShadow: '2px 2px 4px rgba(0,0,0,0.8)',
+                }}
+              >
+                Freja AI
+              </h1>
+              <span 
+                className="text-xs md:text-sm font-medium"
+                style={{
+                  color: isConnected ? '#86EFAC' : '#FCA5A5', // Force bright colors
+                  textShadow: '1px 1px 2px rgba(0,0,0,0.8)',
+                }}
+              >
+                {isConnected ? 'Connected & Ready' : 'Disconnected'} 
+                {conversationState.messages.length > 0 && (
+                  <span className="ml-2">• {conversationState.messages.length} message{conversationState.messages.length !== 1 ? 's' : ''}</span>
+                )}
+              </span>
+            </div>
+          </div>
+          
+          <div className="flex items-center space-x-2 md:space-x-3">
+            {/* Clear conversation button */}
+            <button
+              onClick={clearConversation}
+              disabled={conversationState.messages.length === 0}
+              className="p-2 md:p-3 text-gray-400 hover:text-white hover:bg-gray-800/50 backdrop-blur-sm rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed border border-gray-700/50"
+              title="Clear conversation"
+            >
+              <Trash2 className="w-4 h-4 md:w-5 md:h-5" />
+            </button>
+            
+            {/* Settings button */}
+            <button
+              onClick={toggleSettings}
+              className={clsx(
+                'p-2 md:p-3 backdrop-blur-sm rounded-lg transition-colors border border-gray-700/50',
+                showSettings 
+                  ? 'text-blue-400 bg-blue-400/20 border-blue-400/50' 
+                  : 'text-gray-400 hover:text-white hover:bg-gray-800/50'
+              )}
+              title="Voice Settings"
+            >
+              <Settings className="w-4 h-4 md:w-5 md:h-5" />
+            </button>
+
             {/* Connection toggle button */}
             <button
               onClick={handleConnectionToggle}
               className={clsx(
-                'p-3 md:p-4 rounded-xl transition-all backdrop-blur-sm shadow-lg border',
+                'p-2 md:p-3 rounded-lg transition-all backdrop-blur-sm shadow-lg border',
                 isConnected
                   ? 'text-green-400 bg-green-400/20 hover:bg-green-400/30 border-green-400/50'
                   : 'text-red-400 bg-red-400/20 hover:bg-red-400/30 border-red-400/50'
@@ -272,55 +298,11 @@ export const VoiceChat: React.FC = () => {
               title={isConnected ? 'Disconnect from Hume EVI' : 'Connect to Hume EVI'}
             >
               {isConnected ? (
-                <Wifi className="w-5 h-5 md:w-6 md:h-6" />
+                <Wifi className="w-4 h-4 md:w-5 md:h-5" />
               ) : (
-                <WifiOff className="w-5 h-5 md:w-6 md:h-6" />
+                <WifiOff className="w-4 h-4 md:w-5 md:h-5" />
               )}
             </button>
-          </div>
-
-          {/* Second row with action buttons */}
-          <div className="flex items-center justify-between px-4 md:px-5 pb-3 md:pb-4">
-            <div className="flex items-center space-x-2 md:space-x-3">
-              {/* Clear conversation button */}
-              <button
-                onClick={clearConversation}
-                disabled={conversationState.messages.length === 0}
-                className="flex items-center space-x-2 px-3 py-2 md:px-4 md:py-2 text-gray-400 hover:text-white hover:bg-gray-800/50 backdrop-blur-sm rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed border border-gray-700/50"
-                title="Clear conversation"
-              >
-                <Trash2 className="w-4 h-4 md:w-5 md:h-5" />
-                <span className="hidden sm:inline text-sm font-medium">Clear</span>
-              </button>
-              
-              {/* Settings button */}
-              <button
-                onClick={toggleSettings}
-                className={clsx(
-                  'flex items-center space-x-2 px-3 py-2 md:px-4 md:py-2 backdrop-blur-sm rounded-lg transition-colors border border-gray-700/50',
-                  showSettings 
-                    ? 'text-blue-400 bg-blue-400/20' 
-                    : 'text-gray-400 hover:text-white hover:bg-gray-800/50'
-                )}
-                title="Voice Settings"
-              >
-                <Settings className="w-4 h-4 md:w-5 md:h-5" />
-                <span className="hidden sm:inline text-sm font-medium">Settings</span>
-              </button>
-            </div>
-
-            {/* Current session info */}
-            <div 
-              className="text-xs md:text-sm font-medium"
-              style={{
-                color: '#9CA3AF',
-                textShadow: '1px 1px 2px rgba(0,0,0,0.8)',
-              }}
-            >
-              {conversationState.messages.length > 0 && (
-                <span>{conversationState.messages.length} message{conversationState.messages.length !== 1 ? 's' : ''}</span>
-              )}
-            </div>
           </div>
         </div>
 
@@ -504,7 +486,7 @@ export const VoiceChat: React.FC = () => {
 
         {/* Messages area */}
         <div className="flex-1 flex flex-col min-h-0">
-          <div className="flex-1 overflow-y-auto px-4 md:px-6 py-6 md:py-8">
+          <div className="flex-1 overflow-y-auto px-4 md:px-6 py-6 md:py-8 custom-scrollbar">
             {conversationState.messages.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full text-center space-y-6 md:space-y-8 px-4">
                 <div className="space-y-4 md:space-y-6">
