@@ -28,7 +28,6 @@ export const useVoiceChat = () => {
 
   // Connection and audio state
   const [isConnected, setIsConnected] = useState(false);
-  const [accessToken, setAccessToken] = useState<string | null>(null);
   
   // Refs for managing audio and connection
   const socketRef = useRef<WebSocket | null>(null);
@@ -37,29 +36,6 @@ export const useVoiceChat = () => {
   const audioQueueRef = useRef<Blob[]>([]);
   const currentAudioRef = useRef<HTMLAudioElement | null>(null);
   const isPlayingRef = useRef(false);
-
-  /**
-   * Fetch access token for authentication
-   */
-  const fetchAccessToken = useCallback(async () => {
-    try {
-      const response = await fetch('/api/hume/access-token', {
-        method: 'POST',
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-        throw new Error(`Failed to fetch access token (${response.status}): ${errorData.error || response.statusText}`);
-      }
-
-      const { accessToken } = await response.json();
-      setAccessToken(accessToken);
-      return accessToken;
-    } catch (error) {
-      console.error('Failed to fetch access token:', error);
-      throw error;
-    }
-  }, []);
 
   /**
    * Connect to Hume EVI WebSocket
@@ -71,21 +47,23 @@ export const useVoiceChat = () => {
         return;
       }
 
-      const token = accessToken || await fetchAccessToken();
-      
       console.log('Connecting to Hume EVI...');
       
-      // Create WebSocket connection to Hume EVI
-      let wsUrl = `wss://api.hume.ai/v0/evi/chat?access_token=${token}`;
-      if (process.env.NEXT_PUBLIC_HUME_CONFIG_ID) {
-        wsUrl += `&config_id=${process.env.NEXT_PUBLIC_HUME_CONFIG_ID}`;
+      // Create WebSocket connection to Hume EVI with direct API key authentication
+      const configId = 'b0cc7c5a-5f9f-4ec9-94ee-71bdaafd147c';
+      const apiKey = process.env.NEXT_PUBLIC_HUME_API_KEY;
+      
+      if (!apiKey) {
+        throw new Error('HUME_API_KEY not found in environment variables');
       }
+      
+      const wsUrl = `wss://api.hume.ai/v0/evi/chat?api_key=${apiKey}&config_id=${configId}`;
       
       const socket = new WebSocket(wsUrl);
       socketRef.current = socket;
 
       socket.onopen = () => {
-        console.log('Connected to Hume EVI successfully');
+        console.log('Connected to Hume EVI successfully with config:', configId);
         setIsConnected(true);
       };
 
@@ -153,7 +131,7 @@ export const useVoiceChat = () => {
       addErrorMessage(`Failed to connect: ${error instanceof Error ? error.message : 'Unknown error'}`);
       throw error;
     }
-  }, [accessToken, fetchAccessToken]);
+  }, []);
 
   /**
    * Send audio input to EVI
@@ -174,7 +152,7 @@ export const useVoiceChat = () => {
   const startRecording = useCallback(async () => {
     try {
       if (!isConnected || !socketRef.current) {
-        await connect();
+        throw new Error('Not connected to Hume EVI. Please connect first.');
       }
 
       if (!voiceSettings.microphoneEnabled) {
@@ -239,7 +217,7 @@ export const useVoiceChat = () => {
       addErrorMessage(`Failed to start recording: ${error instanceof Error ? error.message : 'Unknown error'}`);
       throw error;
     }
-  }, [isConnected, voiceSettings.microphoneEnabled, connect, sendAudioInput]);
+  }, [isConnected, voiceSettings.microphoneEnabled, sendAudioInput]);
 
   /**
    * Stop recording audio

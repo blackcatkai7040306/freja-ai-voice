@@ -12,14 +12,12 @@ This guide will help you set up Freja AI Voice with Hume AI's Empathic Voice Int
 
 ### Required Environment Variables
 
-You need to set up the following environment variables:
+You need to set up the following environment variable:
 
-#### Server-side (for access token generation):
-- `HUME_API_KEY` - Your Hume AI API key
-- `HUME_SECRET_KEY` - Your Hume AI Secret key
+#### Client-side (Required):
+- `NEXT_PUBLIC_HUME_API_KEY` - Your Hume AI API key
 
-#### Client-side (optional):
-- `NEXT_PUBLIC_HUME_CONFIG_ID` - Your Hume EVI configuration ID (optional)
+**Note**: The Hume EVI configuration is already set in the code (`b0cc7c5a-5f9f-4ec9-94ee-71bdaafd147c`) with pre-configured LLM model. We use direct API key authentication which simplifies the setup process.
 
 ### Getting Your Hume AI Credentials
 
@@ -27,14 +25,9 @@ You need to set up the following environment variables:
    - Visit [Hume AI Portal](https://portal.hume.ai/)
    - Create an account or sign in
 
-2. **Get API Keys**:
+2. **Get API Key**:
    - Navigate to the API Keys section
-   - Copy your **API Key** and **Secret Key**
-
-3. **Create EVI Configuration** (Optional):
-   - Go to the EVI section in the portal
-   - Create a new configuration
-   - Copy the **Configuration ID**
+   - Copy your **API Key**
 
 ### Setting Up Environment Variables
 
@@ -43,12 +36,8 @@ You need to set up the following environment variables:
 Create a `.env.local` file in your project root:
 
 ```bash
-# Hume AI Credentials (Server-side)
-HUME_API_KEY=your_hume_api_key_here
-HUME_SECRET_KEY=your_hume_secret_key_here
-
-# Hume EVI Configuration (Client-side, Optional)
-NEXT_PUBLIC_HUME_CONFIG_ID=your_config_id_here
+# Hume AI API Key (Required)
+NEXT_PUBLIC_HUME_API_KEY=your_hume_api_key_here
 ```
 
 #### For Vercel Deployment
@@ -56,15 +45,13 @@ NEXT_PUBLIC_HUME_CONFIG_ID=your_config_id_here
 1. Go to your [Vercel Dashboard](https://vercel.com/dashboard)
 2. Select your project
 3. Go to **Settings** → **Environment Variables**
-4. Add the following variables:
+4. Add the following variable:
 
 | Name | Value | Environment |
 |------|-------|-------------|
-| `HUME_API_KEY` | Your Hume API key | Production, Preview, Development |
-| `HUME_SECRET_KEY` | Your Hume Secret key | Production, Preview, Development |
-| `NEXT_PUBLIC_HUME_CONFIG_ID` | Your EVI Config ID (optional) | Production, Preview, Development |
+| `NEXT_PUBLIC_HUME_API_KEY` | Your Hume API key | Production, Preview, Development |
 
-5. Click **Save** for each variable
+5. Click **Save**
 6. Redeploy your application
 
 #### Using Vercel CLI
@@ -72,10 +59,8 @@ NEXT_PUBLIC_HUME_CONFIG_ID=your_config_id_here
 Alternatively, you can use the Vercel CLI:
 
 ```bash
-# Set the environment variables
-vercel env add HUME_API_KEY
-vercel env add HUME_SECRET_KEY
-vercel env add NEXT_PUBLIC_HUME_CONFIG_ID
+# Set the required environment variable
+vercel env add NEXT_PUBLIC_HUME_API_KEY
 
 # Follow the prompts to enter values and select environments
 
@@ -129,13 +114,17 @@ vercel --prod
 
 ### Common Issues
 
-#### "Failed to fetch access token"
-- **Cause**: Missing or incorrect `HUME_API_KEY` or `HUME_SECRET_KEY`
-- **Solution**: Verify your environment variables are set correctly
+#### "HUME_API_KEY not found in environment variables"
+- **Cause**: Missing or incorrect `NEXT_PUBLIC_HUME_API_KEY`
+- **Solution**: Verify your environment variable is set correctly with the `NEXT_PUBLIC_` prefix
 
 #### "Connection error occurred"
-- **Cause**: Network issues or invalid access token
-- **Solution**: Check your internet connection and API credentials
+- **Cause**: Network issues or invalid API key
+- **Solution**: Check your internet connection and verify your API key is correct
+
+#### "Not connected to Hume EVI. Please connect first."
+- **Cause**: Trying to record without establishing a connection
+- **Solution**: Click the WiFi connection button before trying to record
 
 #### "Microphone not working"
 - **Cause**: Browser permissions or device issues
@@ -170,10 +159,10 @@ To enable debug logging, open your browser's developer console (F12) to see deta
 
 ## Security Notes
 
-- Never expose your `HUME_SECRET_KEY` in client-side code
-- API keys are only used server-side for access token generation
-- Access tokens have a limited lifespan (30 minutes)
+- The API key is used directly for WebSocket authentication
+- Your specific Hume EVI configuration is pre-configured in the code
 - All voice data is processed securely through Hume AI
+- The `NEXT_PUBLIC_` prefix is required for client-side environment variables in Next.js
 
 ## Support
 
