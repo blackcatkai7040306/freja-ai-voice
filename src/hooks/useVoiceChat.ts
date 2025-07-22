@@ -191,63 +191,26 @@ export const useVoiceChat = () => {
   }, [])
 
   /**
-   * Initialize streaming audio for continuous playback
+   * Initialize simple audio playback (more reliable than MediaSource)
    */
   const initializeStreamingAudio = useCallback(() => {
     try {
-      if (!voiceSettings.speakerEnabled || isStreamingAudioRef.current) return
+      if (!voiceSettings.speakerEnabled) return
 
-      // Create MediaSource for streaming audio
-      const mediaSource = new MediaSource()
-      mediaSourceRef.current = mediaSource
+      console.log("Initializing audio playback for assistant response")
 
-      const audioUrl = URL.createObjectURL(mediaSource)
-      const audio = new Audio(audioUrl)
-      audio.volume = Math.min(voiceSettings.volume, 0.9)
-      currentAudioRef.current = audio
+      // Clear any existing audio queue and reset state
+      audioQueueRef.current = []
+      isStreamingAudioRef.current = true
 
-      mediaSource.addEventListener("sourceopen", () => {
-        try {
-          // Try different audio formats based on browser support
-          let mimeType = 'audio/webm; codecs="opus"'
-
-          if (!MediaSource.isTypeSupported(mimeType)) {
-            mimeType = 'audio/mp4; codecs="mp4a.40.2"'
-            if (!MediaSource.isTypeSupported(mimeType)) {
-              mimeType = "audio/mpeg"
-            }
-          }
-
-          console.log("Using audio format:", mimeType)
-          const sourceBuffer = mediaSource.addSourceBuffer(mimeType)
-          sourceBufferRef.current = sourceBuffer
-
-          sourceBuffer.addEventListener("updateend", () => {
-            // Process any queued audio chunks
-            if (audioChunksBuffer.current.length > 0) {
-              const chunk = audioChunksBuffer.current.shift()
-              if (chunk && sourceBuffer && !sourceBuffer.updating) {
-                sourceBuffer.appendBuffer(chunk)
-              }
-            }
-          })
-
-          isStreamingAudioRef.current = true
-          setConversationState((prev) => ({ ...prev, isPlaying: true }))
-
-          // Start playing as soon as we have some data
-          audio.play().catch(console.error)
-        } catch (error) {
-          console.error("Failed to setup source buffer:", error)
-        }
-      })
+      setConversationState((prev) => ({ ...prev, isPlaying: true }))
     } catch (error) {
-      console.error("Failed to initialize streaming audio:", error)
+      console.error("Failed to initialize audio:", error)
     }
-  }, [voiceSettings.speakerEnabled, voiceSettings.volume])
+  }, [voiceSettings.speakerEnabled])
 
   /**
-   * Handle streaming audio output chunks
+   * Handle audio output chunks - using simple blob approach
    */
   const handleStreamingAudioOutput = useCallback(
     (base64Audio: string) => {
@@ -255,54 +218,128 @@ export const useVoiceChat = () => {
         if (!voiceSettings.speakerEnabled || !isStreamingAudioRef.current)
           return
 
-        // Convert base64 to Uint8Array
+        console.log("Processing audio chunk, length:", base64Audio.length)
+
+        // Convert base64 to blob
         const binaryString = atob(base64Audio)
         const bytes = new Uint8Array(binaryString.length)
         for (let i = 0; i < binaryString.length; i++) {
           bytes[i] = binaryString.charCodeAt(i)
         }
 
-        const sourceBuffer = sourceBufferRef.current
-        if (sourceBuffer && !sourceBuffer.updating) {
-          sourceBuffer.appendBuffer(bytes)
-        } else {
-          // Queue the chunk if source buffer is busy
-          audioChunksBuffer.current.push(bytes)
+        // Try different audio formats - EVI might send various formats
+        // First try as raw audio/wav
+        const audioBlob = new Blob([bytes], { type: "audio/wav" })
+
+        // If the chunk is too small, it might not be valid audio
+        if (bytes.length < 100) {
+          console.warn("Audio chunk too small, skipping:", bytes.length)
+          return
+        }
+
+        console.log("Created audio blob:", audioBlob.size, "bytes")
+
+        // Add to queue for sequential playback
+        audioQueueRef.current.push(audioBlob)
+
+        // Start playing if not already playing
+        if (!isPlayingRef.current && audioQueueRef.current.length > 0) {
+          playNextAudioChunk()
         }
       } catch (error) {
-        console.error("Failed to handle streaming audio:", error)
+        console.error("Failed to handle audio chunk:", error)
       }
     },
     [voiceSettings.speakerEnabled]
   )
 
   /**
-   * Finalize streaming audio when assistant finishes
+   * Play next audio chunk in queue
+   */
+  const playNextAudioChunk = useCallback(() => {
+    if (audioQueueRef.current.length === 0 || isPlayingRef.current) return
+
+    const audioBlob = audioQueueRef.current.shift()
+    if (!audioBlob) return
+
+    console.log("Playing audio chunk")
+
+    isPlayingRef.current = true
+
+    const audioUrl = URL.createObjectURL(audioBlob)
+    const audio = new Audio(audioUrl)
+
+    // Set volume with some headroom to prevent clipping
+    audio.volume = Math.min(voiceSettings.volume * 0.9, 0.9)
+    audio.preload = "auto"
+
+    currentAudioRef.current = audio
+
+    audio.onended = () => {
+      console.log("Audio chunk finished")
+      URL.revokeObjectURL(audioUrl)
+      currentAudioRef.current = null
+      isPlayingRef.current = false
+
+      // Small delay before next chunk to prevent overlap
+      setTimeout(() => {
+        if (audioQueueRef.current.length > 0) {
+          playNextAudioChunk()
+        } else if (!isStreamingAudioRef.current) {
+          // All chunks played and assistant finished
+          setConversationState((prev) => ({ ...prev, isPlaying: false }))
+        }
+      }, 50)
+    }
+
+    audio.onerror = (error) => {
+      console.error("Audio playback error:", error)
+      URL.revokeObjectURL(audioUrl)
+      currentAudioRef.current = null
+      isPlayingRef.current = false
+
+      // Try next chunk even if this one failed
+      setTimeout(() => {
+        if (audioQueueRef.current.length > 0) {
+          playNextAudioChunk()
+        }
+      }, 100)
+    }
+
+    // Start playback
+    audio.play().catch((error) => {
+      console.error("Failed to start audio playback:", error)
+      URL.revokeObjectURL(audioUrl)
+      currentAudioRef.current = null
+      isPlayingRef.current = false
+
+      // Try next chunk
+      setTimeout(() => {
+        if (audioQueueRef.current.length > 0) {
+          playNextAudioChunk()
+        }
+      }, 100)
+    })
+  }, [voiceSettings.volume])
+
+  /**
+   * Finalize audio when assistant finishes speaking
    */
   const finalizeStreamingAudio = useCallback(() => {
     try {
-      const mediaSource = mediaSourceRef.current
-      if (mediaSource && mediaSource.readyState === "open") {
-        mediaSource.endOfStream()
-      }
+      console.log("Assistant finished speaking, finalizing audio")
 
+      // Mark streaming as finished
       isStreamingAudioRef.current = false
 
-      // Clean up when audio finishes
-      if (currentAudioRef.current) {
-        currentAudioRef.current.onended = () => {
-          setConversationState((prev) => ({ ...prev, isPlaying: false }))
-          if (currentAudioRef.current) {
-            URL.revokeObjectURL(currentAudioRef.current.src)
-            currentAudioRef.current = null
-          }
-          mediaSourceRef.current = null
-          sourceBufferRef.current = null
-          audioChunksBuffer.current = []
-        }
+      // If no audio is currently playing and queue is empty, update state
+      if (!isPlayingRef.current && audioQueueRef.current.length === 0) {
+        setConversationState((prev) => ({ ...prev, isPlaying: false }))
       }
+
+      // The audio will finish naturally as chunks complete
     } catch (error) {
-      console.error("Failed to finalize streaming audio:", error)
+      console.error("Failed to finalize audio:", error)
     }
   }, [])
 
