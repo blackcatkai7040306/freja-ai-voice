@@ -487,15 +487,10 @@ export const VoiceChat: React.FC = () => {
         {/* Messages area */}
         <div className="flex-1 flex flex-col min-h-0">
           <div 
-            className="flex-1 overflow-y-scroll px-4 md:px-6 py-6 md:py-8 visible-scrollbar"
-            style={{
-              scrollbarWidth: 'auto',
-              scrollbarColor: '#9CA3AF #1F2937',
-              overflowY: 'scroll',
-            }}
+            className="flex-1 overflow-y-auto px-4 md:px-6 py-6 md:py-8 custom-scrollbar"
           >
             {conversationState.messages.length === 0 ? (
-              <div className="flex flex-col items-center justify-center text-center space-y-6 md:space-y-8 px-4" style={{ minHeight: 'calc(100vh - 300px)' }}>
+              <div className="flex flex-col items-center justify-center h-full text-center space-y-6 md:space-y-8 px-4">
                 <div className="space-y-4 md:space-y-6">
                   <div className="w-24 h-24 md:w-32 md:h-32 bg-gradient-to-br from-blue-500/20 to-purple-600/20 backdrop-blur-sm rounded-3xl flex items-center justify-center border border-gray-700/50 shadow-xl">
                     <div className="text-4xl md:text-5xl">🎙️</div>
@@ -524,15 +519,11 @@ export const VoiceChat: React.FC = () => {
                     </p>
                   </div>
                 </div>
-                {/* Add extra space to ensure scrolling is possible */}
-                <div className="w-full" style={{ height: '200px' }}></div>
               </div>
             ) : (
               <div className="space-y-4 md:space-y-6 max-w-4xl mx-auto">
                 {conversationState.messages.map(renderMessage)}
                 <div ref={messagesEndRef} />
-                {/* Add extra padding at the bottom to ensure scrolling */}
-                <div className="h-32"></div>
               </div>
             )}
           </div>
