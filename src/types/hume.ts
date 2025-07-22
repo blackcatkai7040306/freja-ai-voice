@@ -55,4 +55,5 @@ export interface VoiceSettings {
   speakerEnabled: boolean;
   volume: number;
   autoPlay: boolean;
+  speechSpeed: number;
 } 

@@ -23,6 +23,7 @@ export const VoiceChat: React.FC = () => {
     stopRecording,
     clearConversation,
     updateVoiceSettings,
+    updateSpeechSpeed,
   } = useVoiceChat();
 
   const [showSettings, setShowSettings] = useState(false);
@@ -320,6 +321,30 @@ export const VoiceChat: React.FC = () => {
                 })}
                 className="w-full h-2 bg-gray-700/50 backdrop-blur-sm rounded-lg appearance-none cursor-pointer"
               />
+            </div>
+            
+            {/* Speech Speed slider */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-300">Speech Speed</span>
+                <span className="text-xs text-gray-500">
+                  {voiceSettings.speechSpeed.toFixed(1)}x
+                </span>
+              </div>
+              <input
+                type="range"
+                min="0.5"
+                max="2.0"
+                step="0.1"
+                value={voiceSettings.speechSpeed}
+                onChange={(e) => updateSpeechSpeed(parseFloat(e.target.value))}
+                className="w-full h-2 bg-gray-700/50 backdrop-blur-sm rounded-lg appearance-none cursor-pointer"
+              />
+              <div className="flex justify-between text-xs text-gray-500">
+                <span>Slow (0.5x)</span>
+                <span>Normal (1.0x)</span>
+                <span>Fast (2.0x)</span>
+              </div>
             </div>
             
             {/* Auto-play toggle */}

@@ -24,6 +24,7 @@ export const useVoiceChat = () => {
     speakerEnabled: true,
     volume: 0.8,
     autoPlay: true,
+    speechSpeed: 1.25, // 25% faster than normal
   });
 
   // Connection and audio state
@@ -36,6 +37,44 @@ export const useVoiceChat = () => {
   const audioQueueRef = useRef<Blob[]>([]);
   const currentAudioRef = useRef<HTMLAudioElement | null>(null);
   const isPlayingRef = useRef(false);
+
+  /**
+   * Send session settings to configure TTS speed and other options
+   */
+  const sendSessionSettings = useCallback(() => {
+    if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
+      const sessionSettings = {
+        type: 'session_settings',
+        tts: {
+          voice: {
+            provider: 'HUME_AI',
+            speed: voiceSettings.speechSpeed, // Use dynamic speed from settings
+          }
+        },
+        language_model: {
+          temperature: 0.7,
+        }
+      };
+      
+      console.log('Sending session settings with speech speed:', voiceSettings.speechSpeed);
+      socketRef.current.send(JSON.stringify(sessionSettings));
+    }
+  }, [voiceSettings.speechSpeed]);
+
+  /**
+   * Update speech speed and send new session settings
+   */
+  const updateSpeechSpeed = useCallback((newSpeed: number) => {
+    setVoiceSettings(prev => ({
+      ...prev,
+      speechSpeed: newSpeed,
+    }));
+    
+    // Send updated settings to Hume AI
+    setTimeout(() => {
+      sendSessionSettings();
+    }, 100);
+  }, [sendSessionSettings]);
 
   /**
    * Connect to Hume EVI WebSocket
@@ -65,6 +104,11 @@ export const useVoiceChat = () => {
       socket.onopen = () => {
         console.log('Connected to Hume EVI successfully with config:', configId);
         setIsConnected(true);
+        
+        // Send session settings immediately after connection
+        setTimeout(() => {
+          sendSessionSettings();
+        }, 100); // Small delay to ensure connection is fully established
       };
 
       // Handle incoming messages
@@ -75,7 +119,7 @@ export const useVoiceChat = () => {
           
           switch (message.type) {
             case 'session_settings':
-              console.log('Session settings received');
+              console.log('Session settings received and applied');
               break;
               
             case 'user_message':
@@ -131,7 +175,7 @@ export const useVoiceChat = () => {
       addErrorMessage(`Failed to connect: ${error instanceof Error ? error.message : 'Unknown error'}`);
       throw error;
     }
-  }, []);
+  }, [sendSessionSettings]);
 
   /**
    * Send audio input to EVI
@@ -474,5 +518,6 @@ export const useVoiceChat = () => {
     stopRecording,
     clearConversation,
     updateVoiceSettings,
+    updateSpeechSpeed,
   };
 }; 
