@@ -104,10 +104,12 @@ export const VoiceChat: React.FC = () => {
               />
             </div>
             <span 
-              className="text-xs font-semibold"
+              className="text-xs font-semibold uppercase tracking-wider"
               style={{
                 color: '#C4B5FD', // Light purple
                 textShadow: '1px 1px 2px rgba(0,0,0,0.9)',
+                fontFamily: '"Inter", "Segoe UI", "Roboto", sans-serif',
+                letterSpacing: '0.1em',
               }}
             >
               {assistantName}
@@ -129,10 +131,12 @@ export const VoiceChat: React.FC = () => {
         >
           {/* Message content */}
           <div 
-            className="text-sm md:text-base lg:text-lg mb-2 font-semibold leading-relaxed"
+            className="text-sm md:text-base lg:text-lg mb-2 font-medium leading-relaxed tracking-wide"
             style={{
               color: isUser ? '#FFFFFF' : '#F8FAFC', // Force white/near-white text
               textShadow: isUser ? '0 1px 2px rgba(0,0,0,0.5)' : '0 1px 2px rgba(0,0,0,0.8)', // Add text shadow for better visibility
+              fontFamily: '"Inter", "Segoe UI", "Roboto", sans-serif',
+              letterSpacing: '0.025em',
             }}
           >
             {message.content}
@@ -154,12 +158,14 @@ export const VoiceChat: React.FC = () => {
               {message.emotions.slice(0, 3).map((emotion) => (
                 <span
                   key={emotion.name}
-                  className="px-3 py-1 rounded-full text-xs border font-bold"
+                  className="px-3 py-1 rounded-full text-xs border font-bold uppercase tracking-wide"
                   style={{
                     backgroundColor: 'rgba(31, 41, 55, 0.9)', // Force dark background
                     color: '#F1F5F9', // Force light text
                     borderColor: 'rgba(107, 114, 128, 0.6)',
                     textShadow: '0 1px 2px rgba(0,0,0,0.8)',
+                    fontFamily: '"Inter", "Segoe UI", "Roboto", sans-serif',
+                    letterSpacing: '0.05em',
                   }}
                   title={`${emotion.name}: ${(emotion.score * 100).toFixed(0)}%`}
                 >
@@ -172,9 +178,11 @@ export const VoiceChat: React.FC = () => {
           
           {/* Timestamp */}
           <div 
-            className="text-xs mt-2 font-mono font-medium opacity-75"
+            className="text-xs mt-2 font-mono font-medium opacity-75 uppercase tracking-wider"
             style={{
               color: isUser ? 'rgba(219, 234, 254, 0.9)' : 'rgba(209, 213, 219, 0.95)', // Force light colors
+              fontFamily: '"JetBrains Mono", "Fira Code", "Consolas", monospace',
+              letterSpacing: '0.05em',
             }}
           >
             {message.timestamp.toLocaleTimeString()}
@@ -188,10 +196,12 @@ export const VoiceChat: React.FC = () => {
               <span className="text-white text-sm md:text-base lg:text-lg font-bold">R</span>
             </div>
             <span 
-              className="text-xs font-semibold"
+              className="text-xs font-semibold uppercase tracking-wider"
               style={{
                 color: '#93C5FD', // Light blue
                 textShadow: '1px 1px 2px rgba(0,0,0,0.9)',
+                fontFamily: '"Inter", "Segoe UI", "Roboto", sans-serif',
+                letterSpacing: '0.1em',
               }}
             >
               {userName}
@@ -224,73 +234,54 @@ export const VoiceChat: React.FC = () => {
       {/* Content with relative positioning to appear above background */}
       <div className="relative z-10 flex flex-col h-full">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 md:p-5 bg-gray-900/95 backdrop-blur-sm border-b border-gray-800/60">
-          <div className="flex items-center space-x-3 md:space-x-4">
-            <div className="w-12 h-12 md:w-14 md:h-14 flex items-center justify-center bg-gray-800/90 backdrop-blur-sm rounded-xl p-2 border border-gray-700 shadow-lg">
-              <Image
-                src="/logo.png"
-                alt="Freja AI Logo"
-                width={48}
-                height={48}
-                className="w-full h-full object-contain"
-                priority
-              />
+        <div className="flex flex-col bg-gray-900/95 backdrop-blur-sm border-b border-gray-800/60">
+          {/* Top row with logo and connection status */}
+          <div className="flex items-center justify-between p-4 md:p-5">
+            <div className="flex items-center space-x-3 md:space-x-4">
+              <div className="w-12 h-12 md:w-14 md:h-14 flex items-center justify-center bg-gray-800/90 backdrop-blur-sm rounded-xl p-2 border border-gray-700 shadow-lg">
+                <Image
+                  src="/logo.png"
+                  alt="Freja AI Logo"
+                  width={48}
+                  height={48}
+                  className="w-full h-full object-contain"
+                  priority
+                />
+              </div>
+              
+              <div className="flex flex-col">
+                <h1 
+                  className="text-lg md:text-xl font-bold tracking-wide"
+                  style={{
+                    background: 'linear-gradient(135deg, #93C5FD 0%, #C4B5FD 100%)',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                    textShadow: '2px 2px 4px rgba(0,0,0,0.8)',
+                    fontFamily: '"Inter", "Segoe UI", "Roboto", sans-serif',
+                    letterSpacing: '0.05em',
+                  }}
+                >
+                  Freja AI
+                </h1>
+                <span 
+                  className="text-xs md:text-sm font-medium uppercase tracking-widest"
+                  style={{
+                    color: isConnected ? '#86EFAC' : '#FCA5A5', // Force bright colors
+                    textShadow: '1px 1px 2px rgba(0,0,0,0.8)',
+                    fontFamily: '"Inter", "Segoe UI", "Roboto", sans-serif',
+                    letterSpacing: '0.15em',
+                  }}
+                >
+                  {isConnected ? 'Connected & Ready' : 'Disconnected'}
+                </span>
+              </div>
             </div>
             
-            <div className="flex flex-col">
-              <h1 
-                className="text-lg md:text-xl font-bold bg-gradient-to-r from-blue-300 to-purple-300 bg-clip-text text-transparent"
-                style={{
-                  textShadow: '2px 2px 4px rgba(0,0,0,0.8)',
-                }}
-              >
-                Freja AI
-              </h1>
-              <span 
-                className="text-xs md:text-sm font-medium"
-                style={{
-                  color: isConnected ? '#86EFAC' : '#FCA5A5', // Force bright colors
-                  textShadow: '1px 1px 2px rgba(0,0,0,0.8)',
-                }}
-              >
-                {isConnected ? 'Connected & Ready' : 'Disconnected'} 
-                {conversationState.messages.length > 0 && (
-                  <span className="ml-2">• {conversationState.messages.length} message{conversationState.messages.length !== 1 ? 's' : ''}</span>
-                )}
-              </span>
-            </div>
-          </div>
-          
-          <div className="flex items-center space-x-2 md:space-x-3">
-            {/* Clear conversation button */}
-            <button
-              onClick={clearConversation}
-              disabled={conversationState.messages.length === 0}
-              className="p-2 md:p-3 text-gray-400 hover:text-white hover:bg-gray-800/50 backdrop-blur-sm rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed border border-gray-700/50"
-              title="Clear conversation"
-            >
-              <Trash2 className="w-4 h-4 md:w-5 md:h-5" />
-            </button>
-            
-            {/* Settings button */}
-            <button
-              onClick={toggleSettings}
-              className={clsx(
-                'p-2 md:p-3 backdrop-blur-sm rounded-lg transition-colors border border-gray-700/50',
-                showSettings 
-                  ? 'text-blue-400 bg-blue-400/20 border-blue-400/50' 
-                  : 'text-gray-400 hover:text-white hover:bg-gray-800/50'
-              )}
-              title="Voice Settings"
-            >
-              <Settings className="w-4 h-4 md:w-5 md:h-5" />
-            </button>
-
             {/* Connection toggle button */}
             <button
               onClick={handleConnectionToggle}
               className={clsx(
-                'p-2 md:p-3 rounded-lg transition-all backdrop-blur-sm shadow-lg border',
+                'p-3 md:p-4 rounded-xl transition-all backdrop-blur-sm shadow-lg border',
                 isConnected
                   ? 'text-green-400 bg-green-400/20 hover:bg-green-400/30 border-green-400/50'
                   : 'text-red-400 bg-red-400/20 hover:bg-red-400/30 border-red-400/50'
@@ -298,11 +289,79 @@ export const VoiceChat: React.FC = () => {
               title={isConnected ? 'Disconnect from Hume EVI' : 'Connect to Hume EVI'}
             >
               {isConnected ? (
-                <Wifi className="w-4 h-4 md:w-5 md:h-5" />
+                <Wifi className="w-5 h-5 md:w-6 md:h-6" />
               ) : (
-                <WifiOff className="w-4 h-4 md:w-5 md:h-5" />
+                <WifiOff className="w-5 h-5 md:w-6 md:h-6" />
               )}
             </button>
+          </div>
+
+          {/* Second row with action buttons */}
+          <div className="flex items-center justify-between px-4 md:px-5 pb-4 md:pb-5 border-t border-gray-700/30">
+            <div className="flex items-center space-x-4 md:space-x-5 py-3">
+              {/* Clear conversation button */}
+              <button
+                onClick={clearConversation}
+                disabled={conversationState.messages.length === 0}
+                className={clsx(
+                  'flex items-center space-x-2 px-4 py-2.5 md:px-5 md:py-3 rounded-xl transition-all duration-200 backdrop-blur-sm shadow-lg border',
+                  conversationState.messages.length === 0
+                    ? 'text-gray-500 bg-gray-800/30 border-gray-700/50 cursor-not-allowed'
+                    : 'text-gray-300 bg-gray-800/60 border-gray-600/50 hover:text-white hover:bg-gray-700/70 hover:border-gray-500/60 hover:shadow-xl'
+                )}
+                title="Clear conversation"
+              >
+                <Trash2 className="w-4 h-4 md:w-5 md:h-5" />
+                <span 
+                  className="text-sm font-semibold tracking-wide"
+                  style={{
+                    fontFamily: '"Inter", "Segoe UI", "Roboto", sans-serif',
+                    letterSpacing: '0.025em',
+                  }}
+                >
+                  Clear Chat
+                </span>
+              </button>
+              
+              {/* Settings button */}
+              <button
+                onClick={toggleSettings}
+                className={clsx(
+                  'flex items-center space-x-2 px-4 py-2.5 md:px-5 md:py-3 rounded-xl transition-all duration-200 backdrop-blur-sm shadow-lg border',
+                  showSettings 
+                    ? 'text-blue-300 bg-blue-500/20 border-blue-400/60 shadow-blue-500/20' 
+                    : 'text-gray-300 bg-gray-800/60 border-gray-600/50 hover:text-white hover:bg-gray-700/70 hover:border-gray-500/60 hover:shadow-xl'
+                )}
+                title="Voice Settings"
+              >
+                <Settings className="w-4 h-4 md:w-5 md:h-5" />
+                <span 
+                  className="text-sm font-semibold tracking-wide"
+                  style={{
+                    fontFamily: '"Inter", "Segoe UI", "Roboto", sans-serif',
+                    letterSpacing: '0.025em',
+                  }}
+                >
+                  Voice Settings
+                </span>
+              </button>
+            </div>
+
+            {/* Current session info */}
+            {conversationState.messages.length > 0 && (
+              <div 
+                className="flex items-center space-x-2 px-3 py-2 bg-gray-800/40 backdrop-blur-sm rounded-lg border border-gray-600/40"
+                style={{
+                  color: '#9CA3AF',
+                  fontFamily: '"Inter", "Segoe UI", "Roboto", sans-serif',
+                }}
+              >
+                <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse"></div>
+                <span className="text-xs md:text-sm font-medium tracking-wide">
+                  {conversationState.messages.length} message{conversationState.messages.length !== 1 ? 's' : ''}
+                </span>
+              </div>
+            )}
           </div>
         </div>
 
@@ -316,10 +375,12 @@ export const VoiceChat: React.FC = () => {
             }}
           >
             <h3 
-              className="text-base md:text-lg font-bold"
+              className="text-base md:text-lg font-bold uppercase tracking-wide"
               style={{
                 color: '#F8FAFC', // Force very light text
                 textShadow: '1px 1px 2px rgba(0,0,0,0.8)',
+                fontFamily: '"Inter", "Segoe UI", "Roboto", sans-serif',
+                letterSpacing: '0.1em',
               }}
             >
               Voice Settings
@@ -329,9 +390,11 @@ export const VoiceChat: React.FC = () => {
               {/* Microphone toggle */}
               <div className="flex items-center justify-between p-3 bg-gray-800/50 rounded-lg border border-gray-600/50">
                 <span 
-                  className="text-sm md:text-base font-semibold"
+                  className="text-sm md:text-base font-semibold tracking-wide"
                   style={{
                     color: '#F1F5F9', // Force light text
+                    fontFamily: '"Inter", "Segoe UI", "Roboto", sans-serif',
+                    letterSpacing: '0.025em',
                   }}
                 >
                   Microphone
@@ -358,9 +421,11 @@ export const VoiceChat: React.FC = () => {
               {/* Speaker toggle */}
               <div className="flex items-center justify-between p-3 bg-gray-800/50 rounded-lg border border-gray-600/50">
                 <span 
-                  className="text-sm md:text-base font-semibold"
+                  className="text-sm md:text-base font-semibold tracking-wide"
                   style={{
                     color: '#F1F5F9', // Force light text
+                    fontFamily: '"Inter", "Segoe UI", "Roboto", sans-serif',
+                    letterSpacing: '0.025em',
                   }}
                 >
                   Speaker
@@ -389,9 +454,11 @@ export const VoiceChat: React.FC = () => {
             <div className="space-y-3 p-3 bg-gray-800/50 rounded-lg border border-gray-600/50">
               <div className="flex items-center justify-between">
                 <span 
-                  className="text-sm md:text-base font-semibold"
+                  className="text-sm md:text-base font-semibold tracking-wide"
                   style={{
                     color: '#F1F5F9', // Force light text
+                    fontFamily: '"Inter", "Segoe UI", "Roboto", sans-serif',
+                    letterSpacing: '0.025em',
                   }}
                 >
                   Volume
@@ -422,9 +489,11 @@ export const VoiceChat: React.FC = () => {
             <div className="space-y-3 p-3 bg-gray-800/50 rounded-lg border border-gray-600/50">
               <div className="flex items-center justify-between">
                 <span 
-                  className="text-sm md:text-base font-semibold"
+                  className="text-sm md:text-base font-semibold tracking-wide"
                   style={{
                     color: '#F1F5F9', // Force light text
+                    fontFamily: '"Inter", "Segoe UI", "Roboto", sans-serif',
+                    letterSpacing: '0.025em',
                   }}
                 >
                   Speech Speed
@@ -462,9 +531,11 @@ export const VoiceChat: React.FC = () => {
             {/* Auto-play toggle */}
             <div className="flex items-center justify-between p-3 bg-gray-800/50 rounded-lg border border-gray-600/50">
               <span 
-                className="text-sm md:text-base font-semibold"
+                className="text-sm md:text-base font-semibold tracking-wide"
                 style={{
                   color: '#F1F5F9', // Force light text
+                  fontFamily: '"Inter", "Segoe UI", "Roboto", sans-serif',
+                  letterSpacing: '0.025em',
                 }}
               >
                 Auto-play responses
@@ -486,9 +557,7 @@ export const VoiceChat: React.FC = () => {
 
         {/* Messages area */}
         <div className="flex-1 flex flex-col min-h-0">
-          <div 
-            className="flex-1 overflow-y-auto px-4 md:px-6 py-6 md:py-8 custom-scrollbar"
-          >
+          <div className="flex-1 overflow-y-auto px-4 md:px-6 py-6 md:py-8">
             {conversationState.messages.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full text-center space-y-6 md:space-y-8 px-4">
                 <div className="space-y-4 md:space-y-6">
@@ -497,19 +566,27 @@ export const VoiceChat: React.FC = () => {
                   </div>
                   <div className="space-y-3 md:space-y-4">
                     <h2 
-                      className="text-2xl md:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-blue-300 to-purple-300 bg-clip-text text-transparent drop-shadow-sm"
+                      className="text-2xl md:text-3xl lg:text-4xl font-black tracking-tight"
                       style={{
-                        textShadow: '2px 2px 4px rgba(0,0,0,0.8)',
+                        background: 'linear-gradient(135deg, #93C5FD 0%, #C4B5FD 50%, #DDD6FE 100%)',
+                        WebkitBackgroundClip: 'text',
+                        WebkitTextFillColor: 'transparent',
+                        textShadow: '3px 3px 6px rgba(0,0,0,0.8)',
+                        fontFamily: '"Inter", "Segoe UI", "Roboto", sans-serif',
+                        letterSpacing: '-0.02em',
                       }}
                     >
                       Welcome, Robert!
                     </h2>
                     <p 
-                      className="max-w-lg leading-relaxed backdrop-blur-sm rounded-xl p-4 md:p-6 text-base md:text-lg font-semibold border border-gray-600/30"
+                      className="max-w-lg leading-relaxed backdrop-blur-sm rounded-xl p-4 md:p-6 text-base md:text-lg font-medium tracking-wide"
                       style={{
                         backgroundColor: 'rgba(0, 0, 0, 0.7)', // Force darker background
                         color: '#F8FAFC', // Force very light text
                         textShadow: '1px 1px 2px rgba(0,0,0,0.9)',
+                        fontFamily: '"Inter", "Segoe UI", "Roboto", sans-serif',
+                        letterSpacing: '0.025em',
+                        lineHeight: '1.6',
                       }}
                     >
                       {isConnected 
@@ -550,11 +627,13 @@ export const VoiceChat: React.FC = () => {
                     color: '#86EFAC', // Force bright green
                     borderColor: 'rgba(34, 197, 94, 0.5)',
                     textShadow: '1px 1px 2px rgba(0,0,0,0.8)',
+                    fontFamily: '"Inter", "Segoe UI", "Roboto", sans-serif',
+                    letterSpacing: '0.025em',
                   }}
                 >
                   <Volume2 className="w-5 h-5 mr-3" />
-                  <span className="hidden sm:inline">Playing AI response...</span>
-                  <span className="sm:hidden">Playing...</span>
+                  <span className="hidden sm:inline uppercase tracking-wide font-semibold">Playing AI response...</span>
+                  <span className="sm:hidden uppercase tracking-wide font-semibold">Playing...</span>
                 </div>
               )}
               
@@ -566,11 +645,13 @@ export const VoiceChat: React.FC = () => {
                     color: '#FCA5A5', // Force bright red
                     borderColor: 'rgba(239, 68, 68, 0.5)',
                     textShadow: '1px 1px 2px rgba(0,0,0,0.8)',
+                    fontFamily: '"Inter", "Segoe UI", "Roboto", sans-serif',
+                    letterSpacing: '0.025em',
                   }}
                 >
                   <WifiOff className="w-5 h-5 mr-3" />
-                  <span className="hidden sm:inline">Not connected to Hume AI</span>
-                  <span className="sm:hidden">Not connected</span>
+                  <span className="hidden sm:inline uppercase tracking-wide font-semibold">Not connected to Hume AI</span>
+                  <span className="sm:hidden uppercase tracking-wide font-semibold">Not connected</span>
                 </div>
               )}
             </div>

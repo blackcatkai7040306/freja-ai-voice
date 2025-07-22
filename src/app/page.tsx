@@ -6,7 +6,7 @@ import { VoiceChat } from '@/components/VoiceChat';
  */
 export default function Home() {
   return (
-    <main className="h-screen w-screen overflow-auto">
+    <main className="h-screen w-screen overflow-x-hidden">
       <VoiceChat />
     </main>
   );
