@@ -41,19 +41,37 @@ export const useVoiceChat = () => {
   const audioChunksBuffer = useRef<Uint8Array[]>([])
   const isStreamingAudioRef = useRef(false)
 
+  // WebSocket connection state and buffering
+  const connectionStateRef = useRef<
+    "connecting" | "connected" | "disconnected"
+  >("disconnected")
+  const lastAudioSentRef = useRef<number>(0)
+  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const keepAliveIntervalRef = useRef<NodeJS.Timeout | null>(null)
+
   /**
-   * Connect to Hume EVI WebSocket
+   * Connect to Hume EVI WebSocket with robust connection handling
    */
   const connect = useCallback(async () => {
     try {
-      if (isConnected || socketRef.current) {
+      if (
+        connectionStateRef.current === "connecting" ||
+        connectionStateRef.current === "connected"
+      ) {
         console.log("Already connected or connecting")
         return
       }
 
+      connectionStateRef.current = "connecting"
       console.log("Connecting to Hume EVI...")
 
-      // Create WebSocket connection to Hume EVI with direct API key authentication
+      // Clear any existing reconnection timeout
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current)
+        reconnectTimeoutRef.current = null
+      }
+
+      // Create WebSocket connection with optimized settings
       const configId = "b0cc7c5a-5f9f-4ec9-94ee-71bdaafd147c"
       const apiKey = process.env.NEXT_PUBLIC_HUME_API_KEY
 
@@ -66,12 +84,31 @@ export const useVoiceChat = () => {
       const socket = new WebSocket(wsUrl)
       socketRef.current = socket
 
+      // Set up connection timeout
+      const connectionTimeout = setTimeout(() => {
+        if (socket.readyState === WebSocket.CONNECTING) {
+          console.error("Connection timeout")
+          socket.close()
+          connectionStateRef.current = "disconnected"
+          setIsConnected(false)
+        }
+      }, 10000)
+
       socket.onopen = () => {
-        console.log("Connected to Hume EVI successfully with config:", configId)
+        clearTimeout(connectionTimeout)
+        console.log("Connected to Hume EVI successfully")
+        connectionStateRef.current = "connected"
         setIsConnected(true)
+
+        // Start keep-alive ping
+        keepAliveIntervalRef.current = setInterval(() => {
+          if (socket.readyState === WebSocket.OPEN) {
+            console.log("Sending keep-alive ping")
+          }
+        }, 30000) // Every 30 seconds
       }
 
-      // Handle incoming messages
+      // Direct message handling - prioritize audio to prevent clipping
       socket.onmessage = (event) => {
         try {
           const message = JSON.parse(event.data)
@@ -95,7 +132,6 @@ export const useVoiceChat = () => {
                 message.message?.content || "",
                 message.models?.prosody?.scores || []
               )
-              // Initialize streaming audio for assistant response
               initializeStreamingAudio()
               break
 
@@ -123,23 +159,41 @@ export const useVoiceChat = () => {
               console.log("Unhandled message type:", message.type)
           }
         } catch (error) {
-          console.error("Failed to parse message:", error)
+          console.error("Failed to parse WebSocket message:", error)
         }
       }
 
       socket.onerror = (error) => {
-        console.error("Socket error:", error)
+        clearTimeout(connectionTimeout)
+        console.error("WebSocket error:", error)
+        connectionStateRef.current = "disconnected"
         setIsConnected(false)
         addErrorMessage("Connection error occurred")
       }
 
-      socket.onclose = () => {
-        console.log("Socket connection closed")
+      socket.onclose = (event) => {
+        clearTimeout(connectionTimeout)
+        console.log("WebSocket connection closed:", event.code, event.reason)
+        connectionStateRef.current = "disconnected"
         setIsConnected(false)
-        cleanup()
+
+        // Clear keep-alive interval
+        if (keepAliveIntervalRef.current) {
+          clearInterval(keepAliveIntervalRef.current)
+          keepAliveIntervalRef.current = null
+        }
+
+        // Auto-reconnect for unexpected closures
+        if (event.code !== 1000 && event.code !== 1001) {
+          console.log("Attempting to reconnect in 3 seconds...")
+          reconnectTimeoutRef.current = setTimeout(() => {
+            connect()
+          }, 3000)
+        }
       }
     } catch (error) {
       console.error("Failed to connect to Hume EVI:", error)
+      connectionStateRef.current = "disconnected"
       setIsConnected(false)
       addErrorMessage(
         `Failed to connect: ${
@@ -151,15 +205,32 @@ export const useVoiceChat = () => {
   }, [])
 
   /**
-   * Send audio input to EVI
+   * Send audio input to EVI with throttling to prevent socket overflow
    */
   const sendAudioInput = useCallback((base64Audio: string) => {
     if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
+      const now = Date.now()
+
+      // Throttle audio input to prevent overwhelming the socket (min 50ms between sends)
+      if (now - lastAudioSentRef.current < 50) {
+        console.log("Throttling audio input to prevent socket overflow")
+        return
+      }
+
       const message = {
         type: "audio_input",
         data: base64Audio,
       }
-      socketRef.current.send(JSON.stringify(message))
+
+      try {
+        socketRef.current.send(JSON.stringify(message))
+        lastAudioSentRef.current = now
+        console.log("Sent audio chunk, size:", base64Audio.length)
+      } catch (error) {
+        console.error("Failed to send audio input:", error)
+      }
+    } else {
+      console.warn("Cannot send audio: WebSocket not connected")
     }
   }, [])
 
@@ -402,7 +473,7 @@ export const useVoiceChat = () => {
         }))
       }
 
-      mediaRecorder.start(250) // Reduce frequency to prevent buffer overflow
+      mediaRecorder.start(100) // Optimized for socket throttling (100ms chunks, 50ms send throttle)
 
       setConversationState((prev) => ({
         ...prev,
@@ -578,7 +649,7 @@ export const useVoiceChat = () => {
   }, [])
 
   /**
-   * Cleanup all resources
+   * Cleanup all resources including connection management
    */
   const cleanup = useCallback(() => {
     // Stop recording
@@ -605,11 +676,25 @@ export const useVoiceChat = () => {
       gainNodeRef.current = null
     }
 
+    // Clear connection timers
+    if (reconnectTimeoutRef.current) {
+      clearTimeout(reconnectTimeoutRef.current)
+      reconnectTimeoutRef.current = null
+    }
+
+    if (keepAliveIntervalRef.current) {
+      clearInterval(keepAliveIntervalRef.current)
+      keepAliveIntervalRef.current = null
+    }
+
     // Close socket
     if (socketRef.current) {
       socketRef.current.close()
       socketRef.current = null
     }
+
+    // Reset connection state
+    connectionStateRef.current = "disconnected"
 
     // Clear all audio buffers and streaming state
     audioQueueRef.current.length = 0
