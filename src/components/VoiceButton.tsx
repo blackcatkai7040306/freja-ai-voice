@@ -1,15 +1,15 @@
-'use client';
+"use client"
 
-import { useState, useEffect } from 'react';
-import { Mic, MicOff, Square } from 'lucide-react';
-import { clsx } from 'clsx';
+import { useState, useEffect } from "react"
+import { Mic, MicOff, Square } from "lucide-react"
+import { clsx } from "clsx"
 
 interface VoiceButtonProps {
-  isRecording: boolean;
-  isProcessing: boolean;
-  onStartRecording: () => void;
-  onStopRecording: () => void;
-  disabled?: boolean;
+  isRecording: boolean
+  isProcessing: boolean
+  onStartRecording: () => void
+  onStopRecording: () => void
+  disabled?: boolean
 }
 
 /**
@@ -23,48 +23,48 @@ export const VoiceButton: React.FC<VoiceButtonProps> = ({
   onStopRecording,
   disabled = false,
 }) => {
-  const [recordingTime, setRecordingTime] = useState(0);
+  const [recordingTime, setRecordingTime] = useState(0)
 
   // Track recording duration
   useEffect(() => {
-    let interval: NodeJS.Timeout;
-    
+    let interval: NodeJS.Timeout
+
     if (isRecording) {
       interval = setInterval(() => {
-        setRecordingTime(prev => prev + 1);
-      }, 1000);
+        setRecordingTime((prev) => prev + 1)
+      }, 1000)
     } else {
-      setRecordingTime(0);
+      setRecordingTime(0)
     }
 
     return () => {
       if (interval) {
-        clearInterval(interval);
+        clearInterval(interval)
       }
-    };
-  }, [isRecording]);
+    }
+  }, [isRecording])
 
   /**
    * Handle voice button click
    */
   const handleClick = () => {
-    if (disabled || isProcessing) return;
+    if (disabled || isProcessing) return
 
     if (isRecording) {
-      onStopRecording();
+      onStopRecording()
     } else {
-      onStartRecording();
+      onStartRecording()
     }
-  };
+  }
 
   /**
    * Format recording time display
    */
   const formatTime = (seconds: number): string => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
+    const mins = Math.floor(seconds / 60)
+    const secs = seconds % 60
+    return `${mins}:${secs.toString().padStart(2, "0")}`
+  }
 
   return (
     <div className="flex flex-col items-center space-y-4">
@@ -73,22 +73,22 @@ export const VoiceButton: React.FC<VoiceButtonProps> = ({
         onClick={handleClick}
         disabled={disabled || isProcessing}
         className={clsx(
-          'relative flex items-center justify-center w-20 h-20 rounded-full transition-all duration-300 focus:outline-none',
+          "relative flex items-center justify-center w-20 h-20 rounded-full transition-all duration-300 focus:outline-none",
           {
             // Default state
-            'bg-gradient-to-br from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 shadow-lg hover:shadow-xl':
+            "bg-gradient-to-br from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 shadow-lg hover:shadow-xl":
               !isRecording && !isProcessing && !disabled,
-            
+
             // Recording state
-            'bg-gradient-to-br from-red-500 to-pink-600 hover:from-red-600 hover:to-pink-700 shadow-lg hover:shadow-xl animate-pulse':
+            "bg-gradient-to-br from-red-500 to-pink-600 hover:from-red-600 hover:to-pink-700 shadow-lg hover:shadow-xl animate-pulse":
               isRecording && !disabled,
-            
+
             // Processing state
-            'bg-gradient-to-br from-yellow-500 to-orange-600 cursor-not-allowed':
+            "bg-gradient-to-br from-yellow-500 to-orange-600 cursor-not-allowed":
               isProcessing,
-            
+
             // Disabled state
-            'bg-gray-600 cursor-not-allowed opacity-50':
+            "bg-gray-600 cursor-not-allowed opacity-50":
               disabled && !isProcessing,
           }
         )}
@@ -130,7 +130,9 @@ export const VoiceButton: React.FC<VoiceButtonProps> = ({
               strokeWidth="2"
               fill="none"
               strokeDasharray={`${2 * Math.PI * 38}`}
-              strokeDashoffset={`${2 * Math.PI * 38 * (1 - recordingTime / 60)}`}
+              strokeDashoffset={`${
+                2 * Math.PI * 38 * (1 - recordingTime / 60)
+              }`}
               className="transition-all duration-1000"
             />
           </svg>
@@ -141,9 +143,7 @@ export const VoiceButton: React.FC<VoiceButtonProps> = ({
       <div className="text-center space-y-1">
         {isRecording ? (
           <>
-            <div className="text-red-400 font-medium text-sm">
-              Recording...
-            </div>
+            <div className="text-red-400 font-medium text-sm">Recording...</div>
             <div className="text-gray-400 text-xs font-mono">
               {formatTime(recordingTime)}
             </div>
@@ -153,13 +153,9 @@ export const VoiceButton: React.FC<VoiceButtonProps> = ({
             Processing...
           </div>
         ) : disabled ? (
-          <div className="text-gray-500 text-sm">
-            Microphone disabled
-          </div>
+          <div className="text-gray-500 text-sm">Microphone disabled</div>
         ) : (
-          <div className="text-gray-400 text-sm">
-            Tap to speak
-          </div>
+          <div className="text-gray-400 text-sm">Tap to speak</div>
         )}
       </div>
 
@@ -170,5 +166,5 @@ export const VoiceButton: React.FC<VoiceButtonProps> = ({
         </div>
       )}
     </div>
-  );
-}; 
+  )
+}

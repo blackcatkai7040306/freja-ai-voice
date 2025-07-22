@@ -1,4 +1,4 @@
-import { VoiceChat } from '@/components/VoiceChat';
+import { VoiceChat } from "@/components/VoiceChat"
 
 /**
  * Main application page for Freja AI Voice Companion
@@ -6,8 +6,8 @@ import { VoiceChat } from '@/components/VoiceChat';
  */
 export default function Home() {
   return (
-    <main className="h-screen w-screen overflow-x-hidden">
+    <main className="h-screen w-screen overflow-hidden">
       <VoiceChat />
     </main>
-  );
+  )
 }
