@@ -205,7 +205,7 @@ export const VoiceChat: React.FC = () => {
       <div
         className="absolute inset-0"
         style={{
-          backgroundImage: "url(/background.png)",
+          backgroundImage: "url(/background1.png)",
           backgroundSize: "cover",
           backgroundPosition: "center 20%", // Optimized to show face area
           backgroundRepeat: "no-repeat",

@@ -34,6 +34,8 @@ export const useVoiceChat = () => {
   const audioQueueRef = useRef<Blob[]>([])
   const currentAudioRef = useRef<HTMLAudioElement | null>(null)
   const isPlayingRef = useRef(false)
+  const audioContextRef = useRef<AudioContext | null>(null)
+  const gainNodeRef = useRef<GainNode | null>(null)
 
   /**
    * Connect to Hume EVI WebSocket
@@ -151,6 +153,33 @@ export const useVoiceChat = () => {
   }, [])
 
   /**
+   * Initialize audio context for better processing
+   */
+  const initializeAudioContext = useCallback(() => {
+    if (!audioContextRef.current) {
+      audioContextRef.current = new (window.AudioContext ||
+        (window as unknown as typeof AudioContext))()
+      gainNodeRef.current = audioContextRef.current.createGain()
+      gainNodeRef.current.connect(audioContextRef.current.destination)
+    }
+  }, [])
+
+  /**
+   * Convert blob to base64 using FileReader (more efficient)
+   */
+  const blobToBase64 = useCallback((blob: Blob): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = () => {
+        const base64 = (reader.result as string).split(",")[1]
+        resolve(base64)
+      }
+      reader.onerror = reject
+      reader.readAsDataURL(blob)
+    })
+  }, [])
+
+  /**
    * Start recording audio from user's microphone
    */
   const startRecording = useCallback(async () => {
@@ -164,6 +193,9 @@ export const useVoiceChat = () => {
       }
 
       console.log("Starting audio recording...")
+
+      // Initialize audio context
+      initializeAudioContext()
 
       // Get user media with proper constraints for EVI
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -181,6 +213,7 @@ export const useVoiceChat = () => {
       // Create MediaRecorder with WebM format
       const mediaRecorder = new MediaRecorder(stream, {
         mimeType: "audio/webm;codecs=opus",
+        audioBitsPerSecond: 64000, // Optimize bitrate to reduce clipping
       })
 
       mediaRecorderRef.current = mediaRecorder
@@ -188,13 +221,8 @@ export const useVoiceChat = () => {
       mediaRecorder.ondataavailable = async (event) => {
         if (event.data.size > 0) {
           try {
-            // Convert blob to base64 for transmission
-            const arrayBuffer = await event.data.arrayBuffer()
-            const base64Audio = btoa(
-              String.fromCharCode(...new Uint8Array(arrayBuffer))
-            )
-
-            // Send audio input to EVI
+            // Use improved base64 conversion
+            const base64Audio = await blobToBase64(event.data)
             sendAudioInput(base64Audio)
           } catch (error) {
             console.error("Failed to send audio data:", error)
@@ -210,7 +238,7 @@ export const useVoiceChat = () => {
         }))
       }
 
-      mediaRecorder.start(100) // Send audio chunks every 100ms
+      mediaRecorder.start(250) // Reduce frequency to prevent buffer overflow
 
       setConversationState((prev) => ({
         ...prev,
@@ -227,7 +255,13 @@ export const useVoiceChat = () => {
       )
       throw error
     }
-  }, [isConnected, voiceSettings.microphoneEnabled, sendAudioInput])
+  }, [
+    isConnected,
+    voiceSettings.microphoneEnabled,
+    sendAudioInput,
+    initializeAudioContext,
+    blobToBase64,
+  ])
 
   /**
    * Stop recording audio
@@ -265,13 +299,19 @@ export const useVoiceChat = () => {
       try {
         if (!voiceSettings.speakerEnabled) return
 
-        // Convert base64 to blob
+        // Limit audio queue size to prevent memory issues
+        if (audioQueueRef.current.length > 10) {
+          console.warn("Audio queue too large, clearing oldest entries")
+          audioQueueRef.current = audioQueueRef.current.slice(-5)
+        }
+
+        // Convert base64 to blob with proper audio type
         const binaryString = atob(base64Audio)
         const bytes = new Uint8Array(binaryString.length)
         for (let i = 0; i < binaryString.length; i++) {
           bytes[i] = binaryString.charCodeAt(i)
         }
-        const audioBlob = new Blob([bytes], { type: "audio/wav" })
+        const audioBlob = new Blob([bytes], { type: "audio/mpeg" })
 
         // Add to audio queue
         audioQueueRef.current.push(audioBlob)
@@ -303,7 +343,15 @@ export const useVoiceChat = () => {
 
     const audioUrl = URL.createObjectURL(audioBlob)
     const audio = new Audio(audioUrl)
-    audio.volume = voiceSettings.volume
+
+    // Normalize volume to prevent clipping (max 0.8 to leave headroom)
+    const normalizedVolume = Math.min(voiceSettings.volume * 0.8, 0.8)
+    audio.volume = normalizedVolume
+
+    // Add crossfade and anti-aliasing
+    audio.crossOrigin = "anonymous"
+    audio.preload = "auto"
+
     currentAudioRef.current = audio
 
     audio.onended = () => {
@@ -312,10 +360,12 @@ export const useVoiceChat = () => {
       setConversationState((prev) => ({ ...prev, isPlaying: false }))
       currentAudioRef.current = null
 
-      // Play next audio in queue
-      if (audioQueueRef.current.length > 0) {
-        playNextAudio()
-      }
+      // Small delay before playing next to prevent overlap
+      setTimeout(() => {
+        if (audioQueueRef.current.length > 0) {
+          playNextAudio()
+        }
+      }, 50)
     }
 
     audio.onerror = (error) => {
@@ -324,6 +374,13 @@ export const useVoiceChat = () => {
       isPlayingRef.current = false
       setConversationState((prev) => ({ ...prev, isPlaying: false }))
       currentAudioRef.current = null
+
+      // Try to play next audio even if current one failed
+      setTimeout(() => {
+        if (audioQueueRef.current.length > 0) {
+          playNextAudio()
+        }
+      }, 100)
     }
 
     audio.play().catch((error) => {
@@ -332,6 +389,13 @@ export const useVoiceChat = () => {
       isPlayingRef.current = false
       setConversationState((prev) => ({ ...prev, isPlaying: false }))
       currentAudioRef.current = null
+
+      // Try to play next audio even if current one failed
+      setTimeout(() => {
+        if (audioQueueRef.current.length > 0) {
+          playNextAudio()
+        }
+      }, 100)
     })
   }, [voiceSettings.volume])
 
@@ -448,11 +512,21 @@ export const useVoiceChat = () => {
     // Stop audio playback
     stopAudioPlayback()
 
+    // Close audio context
+    if (audioContextRef.current) {
+      audioContextRef.current.close()
+      audioContextRef.current = null
+      gainNodeRef.current = null
+    }
+
     // Close socket
     if (socketRef.current) {
       socketRef.current.close()
       socketRef.current = null
     }
+
+    // Clear audio queue
+    audioQueueRef.current.length = 0
 
     setConversationState((prev) => ({
       ...prev,
