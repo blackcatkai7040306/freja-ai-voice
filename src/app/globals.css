@@ -366,6 +366,11 @@ input[type="checkbox"] {
 /* Custom scrollbar styles */
 .custom-scrollbar {
   scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+  transition: scrollbar-color 0.3s ease;
+}
+
+.custom-scrollbar:hover {
   scrollbar-color: #6B7280 transparent;
 }
 
@@ -379,9 +384,13 @@ input[type="checkbox"] {
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: #6B7280;
+  background: transparent;
   border-radius: 4px;
-  transition: background-color 0.2s ease;
+  transition: background-color 0.3s ease;
+}
+
+.custom-scrollbar:hover::-webkit-scrollbar-thumb {
+  background: #6B7280;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
@@ -396,30 +405,10 @@ input[type="checkbox"] {
 @-moz-document url-prefix() {
   .custom-scrollbar {
     scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
+  }
+  
+  .custom-scrollbar:hover {
     scrollbar-color: #6B7280 transparent;
   }
-}
-
-/* Simple visible scrollbar */
-.visible-scrollbar {
-  overflow-y: auto;
-  scrollbar-width: thin;
-  scrollbar-color: #6B7280 transparent;
-}
-
-.visible-scrollbar::-webkit-scrollbar {
-  width: 8px;
-}
-
-.visible-scrollbar::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.visible-scrollbar::-webkit-scrollbar-thumb {
-  background: #6B7280;
-  border-radius: 4px;
-}
-
-.visible-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: #9CA3AF;
 }
