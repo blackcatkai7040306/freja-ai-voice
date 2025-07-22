@@ -107,7 +107,7 @@ export const VoiceChat: React.FC = () => {
                 AI
               </div>
             </div>
-            <span className="text-xs text-gray-400 font-medium hidden sm:block">{assistantName}</span>
+            <span className="text-xs text-gray-700 font-medium hidden sm:block">{assistantName}</span>
           </div>
         )}
 
@@ -116,7 +116,7 @@ export const VoiceChat: React.FC = () => {
             'max-w-[280px] sm:max-w-xs lg:max-w-md px-3 md:px-4 py-2 md:py-3 rounded-2xl shadow-lg backdrop-blur-sm',
             isUser
               ? 'bg-gradient-to-br from-blue-500/90 to-purple-600/90 text-white border border-blue-400/30'
-              : 'bg-gray-800/90 text-gray-100 border border-gray-600/50'
+              : 'bg-gray-100/95 text-gray-800 border border-gray-300/50'
           )}
         >
           {/* Message content */}
@@ -138,7 +138,7 @@ export const VoiceChat: React.FC = () => {
               {message.emotions.slice(0, 3).map((emotion) => (
                 <span
                   key={emotion.name}
-                  className="px-2 py-1 bg-gray-700/70 backdrop-blur-sm rounded-full text-xs text-gray-200 border border-gray-600/50"
+                  className="px-2 py-1 bg-gray-200/80 backdrop-blur-sm rounded-full text-xs text-gray-700 border border-gray-400/50"
                   title={`${emotion.name}: ${(emotion.score * 100).toFixed(0)}%`}
                 >
                   <span className="hidden sm:inline">{emotion.name} </span>
@@ -160,7 +160,7 @@ export const VoiceChat: React.FC = () => {
             <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 border-2 border-blue-400/50 shadow-lg backdrop-blur-sm flex items-center justify-center">
               <span className="text-white text-xs md:text-sm font-bold">R</span>
             </div>
-            <span className="text-xs text-gray-400 font-medium hidden sm:block">{userName}</span>
+            <span className="text-xs text-gray-700 font-medium hidden sm:block">{userName}</span>
           </div>
         )}
       </div>
@@ -168,7 +168,7 @@ export const VoiceChat: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-black text-white relative">
+    <div className="flex flex-col h-screen bg-black text-gray-900 relative">
       {/* Background Image */}
       <div 
         className="absolute inset-0"
@@ -184,7 +184,7 @@ export const VoiceChat: React.FC = () => {
       />
       
       {/* Overlay to ensure text readability */}
-      <div className="absolute inset-0 bg-black/45" />
+      <div className="absolute inset-0 bg-black/60" />
       
       {/* Content with relative positioning to appear above background */}
       <div className="relative z-10 flex flex-col h-full">
@@ -234,7 +234,7 @@ export const VoiceChat: React.FC = () => {
             <button
               onClick={clearConversation}
               disabled={conversationState.messages.length === 0}
-              className="p-1.5 md:p-2 text-gray-400 hover:text-white hover:bg-gray-800/50 backdrop-blur-sm rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="p-1.5 md:p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-800/50 backdrop-blur-sm rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               title="Clear conversation"
             >
               <Trash2 className="w-4 h-4 md:w-5 md:h-5" />
@@ -243,7 +243,7 @@ export const VoiceChat: React.FC = () => {
             {/* Settings button */}
             <button
               onClick={toggleSettings}
-              className="p-1.5 md:p-2 text-gray-400 hover:text-white hover:bg-gray-800/50 backdrop-blur-sm rounded-lg transition-colors"
+              className="p-1.5 md:p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-800/50 backdrop-blur-sm rounded-lg transition-colors"
               title="Settings"
             >
               <Settings className="w-4 h-4 md:w-5 md:h-5" />
@@ -254,12 +254,12 @@ export const VoiceChat: React.FC = () => {
         {/* Settings panel */}
         {showSettings && (
           <div className="bg-gray-900/90 backdrop-blur-sm border-b border-gray-800/50 p-3 md:p-4 space-y-3 md:space-y-4">
-            <h3 className="text-sm font-semibold text-gray-300">Voice Settings</h3>
+            <h3 className="text-sm font-semibold text-gray-800">Voice Settings</h3>
             
             <div className="grid grid-cols-2 gap-3 md:gap-4">
               {/* Microphone toggle */}
               <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-300">Microphone</span>
+                <span className="text-sm text-gray-700">Microphone</span>
                 <button
                   onClick={() => updateVoiceSettings({ 
                     microphoneEnabled: !voiceSettings.microphoneEnabled 
@@ -281,7 +281,7 @@ export const VoiceChat: React.FC = () => {
               
               {/* Speaker toggle */}
               <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-300">Speaker</span>
+                <span className="text-sm text-gray-700">Speaker</span>
                 <button
                   onClick={() => updateVoiceSettings({ 
                     speakerEnabled: !voiceSettings.speakerEnabled 
@@ -305,8 +305,8 @@ export const VoiceChat: React.FC = () => {
             {/* Volume slider */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-300">Volume</span>
-                <span className="text-xs text-gray-500">
+                <span className="text-sm text-gray-700">Volume</span>
+                <span className="text-xs text-gray-600">
                   {Math.round(voiceSettings.volume * 100)}%
                 </span>
               </div>
@@ -326,8 +326,8 @@ export const VoiceChat: React.FC = () => {
             {/* Speech Speed slider */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-300">Speech Speed</span>
-                <span className="text-xs text-gray-500">
+                <span className="text-sm text-gray-700">Speech Speed</span>
+                <span className="text-xs text-gray-600">
                   {voiceSettings.speechSpeed.toFixed(1)}x
                 </span>
               </div>
@@ -340,7 +340,7 @@ export const VoiceChat: React.FC = () => {
                 onChange={(e) => updateSpeechSpeed(parseFloat(e.target.value))}
                 className="w-full h-2 bg-gray-700/50 backdrop-blur-sm rounded-lg appearance-none cursor-pointer"
               />
-              <div className="flex justify-between text-xs text-gray-500">
+              <div className="flex justify-between text-xs text-gray-600">
                 <span>Slow (0.5x)</span>
                 <span>Normal (1.0x)</span>
                 <span>Fast (2.0x)</span>
@@ -349,7 +349,7 @@ export const VoiceChat: React.FC = () => {
             
             {/* Auto-play toggle */}
             <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-300">Auto-play responses</span>
+              <span className="text-sm text-gray-700">Auto-play responses</span>
               <label className="relative inline-flex items-center cursor-pointer">
                 <input
                   type="checkbox"
@@ -377,7 +377,7 @@ export const VoiceChat: React.FC = () => {
                   <h2 className="text-xl md:text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
                     Welcome, Robert!
                   </h2>
-                  <p className="text-gray-200 max-w-sm md:max-w-md leading-relaxed backdrop-blur-sm bg-black/20 rounded-lg p-3 md:p-4 text-sm md:text-base">
+                  <p className="text-gray-700 max-w-sm md:max-w-md leading-relaxed backdrop-blur-sm bg-white/80 rounded-lg p-3 md:p-4 text-sm md:text-base">
                     {isConnected 
                       ? "Connected to Freja AI! Tap the microphone button below to begin our conversation."
                       : "Connect to Freja AI first by clicking the connection button above, then tap the microphone to start chatting."
@@ -409,18 +409,18 @@ export const VoiceChat: React.FC = () => {
           {/* Status indicator */}
           <div className="flex flex-col items-center mt-3 md:mt-4 space-y-2">
             {conversationState.isPlaying && (
-              <div className="flex items-center justify-center text-green-400 text-sm bg-black/20 backdrop-blur-sm rounded-lg px-3 py-2">
+              <div className="flex items-center justify-center text-green-400 text-sm bg-white/80 backdrop-blur-sm rounded-lg px-3 py-2">
                 <Volume2 className="w-4 h-4 mr-2" />
-                <span className="hidden sm:inline">Playing response...</span>
-                <span className="sm:hidden">Playing...</span>
+                <span className="hidden sm:inline text-gray-700">Playing response...</span>
+                <span className="sm:hidden text-gray-700">Playing...</span>
               </div>
             )}
             
             {!isConnected && (
-              <div className="flex items-center justify-center text-red-400 text-sm bg-black/20 backdrop-blur-sm rounded-lg px-3 py-2">
+              <div className="flex items-center justify-center text-red-400 text-sm bg-white/80 backdrop-blur-sm rounded-lg px-3 py-2">
                 <WifiOff className="w-4 h-4 mr-2" />
-                <span className="hidden sm:inline">Not connected to Hume AI</span>
-                <span className="sm:hidden">Not connected</span>
+                <span className="hidden sm:inline text-gray-700">Not connected to Hume AI</span>
+                <span className="sm:hidden text-gray-700">Not connected</span>
               </div>
             )}
           </div>

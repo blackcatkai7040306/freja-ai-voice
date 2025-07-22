@@ -144,7 +144,7 @@ export const VoiceButton: React.FC<VoiceButtonProps> = ({
             <div className="text-red-400 font-medium text-sm">
               Recording...
             </div>
-            <div className="text-gray-400 text-xs font-mono">
+            <div className="text-gray-700 text-xs font-mono">
               {formatTime(recordingTime)}
             </div>
           </>
@@ -153,11 +153,11 @@ export const VoiceButton: React.FC<VoiceButtonProps> = ({
             Processing...
           </div>
         ) : disabled ? (
-          <div className="text-gray-500 text-sm">
+          <div className="text-gray-600 text-sm">
             Microphone disabled
           </div>
         ) : (
-          <div className="text-gray-400 text-sm">
+          <div className="text-gray-700 text-sm">
             Tap to speak
           </div>
         )}
@@ -165,7 +165,7 @@ export const VoiceButton: React.FC<VoiceButtonProps> = ({
 
       {/* Quick action hint */}
       {!isRecording && !isProcessing && !disabled && (
-        <div className="text-xs text-gray-500 text-center max-w-xs">
+        <div className="text-xs text-gray-600 text-center max-w-xs">
           Hold to record, release to send
         </div>
       )}
