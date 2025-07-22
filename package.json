@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@humeai/voice-react": "^0.2.1",
     "@types/dom-mediacapture-record": "^1.0.22",
     "autoprefixer": "^10.4.21",
     "axios": "^1.10.0",

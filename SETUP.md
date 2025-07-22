@@ -1,92 +1,187 @@
-# Freja AI Voice Companion Setup
+# Freja AI Voice Setup Guide
 
-## Environment Variables
+This guide will help you set up Freja AI Voice with Hume AI's Empathic Voice Interface (EVI).
 
-Create a `.env.local` file in the root directory with the following variables:
+## Prerequisites
 
-```env
-# Hume AI Configuration
-# Get your API key from https://dev.hume.ai/
+- Node.js 18+ installed
+- A Hume AI account with API access
+- Vercel account (for deployment)
 
-# Server-side API key (keep this secret)
+## Environment Variables Setup
+
+### Required Environment Variables
+
+You need to set up the following environment variables:
+
+#### Server-side (for access token generation):
+- `HUME_API_KEY` - Your Hume AI API key
+- `HUME_SECRET_KEY` - Your Hume AI Secret key
+
+#### Client-side (optional):
+- `NEXT_PUBLIC_HUME_CONFIG_ID` - Your Hume EVI configuration ID (optional)
+
+### Getting Your Hume AI Credentials
+
+1. **Sign up/Login to Hume AI**:
+   - Visit [Hume AI Portal](https://portal.hume.ai/)
+   - Create an account or sign in
+
+2. **Get API Keys**:
+   - Navigate to the API Keys section
+   - Copy your **API Key** and **Secret Key**
+
+3. **Create EVI Configuration** (Optional):
+   - Go to the EVI section in the portal
+   - Create a new configuration
+   - Copy the **Configuration ID**
+
+### Setting Up Environment Variables
+
+#### For Local Development
+
+Create a `.env.local` file in your project root:
+
+```bash
+# Hume AI Credentials (Server-side)
 HUME_API_KEY=your_hume_api_key_here
+HUME_SECRET_KEY=your_hume_secret_key_here
 
-# Optional: Hume EVI Configuration ID
-HUME_CONFIG_ID=your_config_id_here
+# Hume EVI Configuration (Client-side, Optional)
+NEXT_PUBLIC_HUME_CONFIG_ID=your_config_id_here
 ```
 
-## Getting Your Hume AI API Key
+#### For Vercel Deployment
 
-1. Visit [Hume AI Console](https://beta.hume.ai/sign-up)
-2. Sign up for an account or log in
-3. Navigate to API Keys section
-4. Generate a new API key for your project
-5. Copy the API key to your `.env.local` file
+1. Go to your [Vercel Dashboard](https://vercel.com/dashboard)
+2. Select your project
+3. Go to **Settings** → **Environment Variables**
+4. Add the following variables:
 
-## Running the Application
+| Name | Value | Environment |
+|------|-------|-------------|
+| `HUME_API_KEY` | Your Hume API key | Production, Preview, Development |
+| `HUME_SECRET_KEY` | Your Hume Secret key | Production, Preview, Development |
+| `NEXT_PUBLIC_HUME_CONFIG_ID` | Your EVI Config ID (optional) | Production, Preview, Development |
 
-1. Install dependencies:
+5. Click **Save** for each variable
+6. Redeploy your application
+
+#### Using Vercel CLI
+
+Alternatively, you can use the Vercel CLI:
+
 ```bash
-npm install
+# Set the environment variables
+vercel env add HUME_API_KEY
+vercel env add HUME_SECRET_KEY
+vercel env add NEXT_PUBLIC_HUME_CONFIG_ID
+
+# Follow the prompts to enter values and select environments
+
+# Redeploy
+vercel --prod
 ```
 
-2. Set up your environment variables (create `.env.local` file)
+## Installation & Running
 
-3. Run the development server:
-```bash
-npm run dev
-```
+### Local Development
 
-4. Open [http://localhost:3000](http://localhost:3000) in your browser
+1. **Install dependencies**:
+   ```bash
+   npm install
+   ```
 
-## Features
+2. **Set up environment variables** (see above)
 
-- **Voice Recording**: Click and hold to record voice messages
-- **Real-time Processing**: Audio is processed through Hume AI for emotion analysis
-- **Voice Responses**: AI responses include emotional context
-- **Settings Panel**: Customize microphone, speaker, and volume settings
-- **Conversation History**: View past messages with timestamps
-- **Responsive Design**: Works on desktop and mobile devices
+3. **Run the development server**:
+   ```bash
+   npm run dev
+   ```
 
-## Technical Architecture
+4. **Open your browser**:
+   - Navigate to `http://localhost:3000`
+   - Click the connection button to connect to Hume EVI
+   - Allow microphone permissions when prompted
+   - Start your voice conversation!
 
-- **Next.js 15**: React framework with App Router
-- **TypeScript**: Type-safe development
-- **TailwindCSS**: Utility-first styling
-- **Hume AI**: Emotional AI voice processing
-- **Web Audio API**: Browser-native audio recording
+### Production Deployment
 
-## Browser Compatibility
+1. **Deploy to Vercel**:
+   ```bash
+   vercel --prod
+   ```
 
-- Chrome 88+
-- Firefox 85+
-- Safari 14+
-- Edge 88+
+2. **Set environment variables** in Vercel Dashboard (see above)
 
-Note: Requires HTTPS in production for microphone access.
+3. **Test your deployment**:
+   - Visit your deployed URL
+   - Test the voice functionality
 
-## Customization
+## Usage
 
-The app is designed with a dark theme and modern UI. You can customize:
-
-- Colors in `tailwind.config.js`
-- Voice settings in the settings panel
-- Audio quality settings in `useVoiceChat` hook
-- UI components in the `components` directory
+1. **Connect**: Click the WiFi icon in the header to connect to Hume EVI
+2. **Settings**: Configure microphone, speaker, and volume settings
+3. **Record**: Click and hold the microphone button to record your voice
+4. **Listen**: The AI will respond with both text and voice
 
 ## Troubleshooting
 
-### Microphone Not Working
-- Ensure browser has microphone permissions
-- Check if HTTPS is enabled (required for production)
-- Verify microphone is not muted or blocked
+### Common Issues
 
-### API Errors
-- Verify your Hume API key is correct
-- Check API rate limits
-- Ensure server is running properly
+#### "Failed to fetch access token"
+- **Cause**: Missing or incorrect `HUME_API_KEY` or `HUME_SECRET_KEY`
+- **Solution**: Verify your environment variables are set correctly
 
-### Audio Playback Issues
-- Check speaker/headphone connections
-- Verify volume settings in the app
-- Test with different browsers 
+#### "Connection error occurred"
+- **Cause**: Network issues or invalid access token
+- **Solution**: Check your internet connection and API credentials
+
+#### "Microphone not working"
+- **Cause**: Browser permissions or device issues
+- **Solution**: 
+  - Allow microphone permissions in your browser
+  - Check if other applications are using the microphone
+  - Try refreshing the page
+
+#### "No audio playback"
+- **Cause**: Speaker settings or browser audio issues
+- **Solution**:
+  - Check speaker settings in the app
+  - Verify browser audio isn't muted
+  - Try adjusting volume settings
+
+### Debug Mode
+
+To enable debug logging, open your browser's developer console (F12) to see detailed logs about:
+- WebSocket connection status
+- Audio processing
+- API calls
+- Error messages
+
+## Features
+
+- **Real-time voice conversation** with Hume AI EVI
+- **Emotion detection** displayed with messages
+- **Audio queue management** for smooth playback
+- **Connection status** indicators
+- **Voice settings** (microphone, speaker, volume)
+- **Conversation history** with timestamps
+
+## Security Notes
+
+- Never expose your `HUME_SECRET_KEY` in client-side code
+- API keys are only used server-side for access token generation
+- Access tokens have a limited lifespan (30 minutes)
+- All voice data is processed securely through Hume AI
+
+## Support
+
+If you encounter issues:
+
+1. Check the browser console for error messages
+2. Verify all environment variables are set correctly
+3. Ensure your Hume AI account has EVI access
+4. Try refreshing the page and reconnecting
+
+For additional help, refer to the [Hume AI Documentation](https://dev.hume.ai/docs/empathic-voice-interface-evi/overview). 

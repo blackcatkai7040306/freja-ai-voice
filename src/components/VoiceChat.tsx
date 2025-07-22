@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Settings, Trash2, Volume2, VolumeX, Mic, MicOff } from 'lucide-react';
+import { Settings, Trash2, Volume2, VolumeX, Mic, MicOff, Wifi, WifiOff } from 'lucide-react';
 import Image from 'next/image';
 import { VoiceButton } from './VoiceButton';
 import { useVoiceChat } from '@/hooks/useVoiceChat';
@@ -10,12 +10,15 @@ import { clsx } from 'clsx';
 
 /**
  * Main voice chat interface component
- * Handles the complete voice conversation experience with Hume AI
+ * Handles the complete voice conversation experience with Hume AI EVI
  */
 export const VoiceChat: React.FC = () => {
   const {
     conversationState,
     voiceSettings,
+    isConnected,
+    connect,
+    disconnect,
     startRecording,
     stopRecording,
     clearConversation,
@@ -35,6 +38,32 @@ export const VoiceChat: React.FC = () => {
    */
   const toggleSettings = () => {
     setShowSettings(!showSettings);
+  };
+
+  /**
+   * Handle connection toggle
+   */
+  const handleConnectionToggle = async () => {
+    try {
+      if (isConnected) {
+        disconnect();
+      } else {
+        await connect();
+      }
+    } catch (error) {
+      console.error('Connection toggle failed:', error);
+    }
+  };
+
+  /**
+   * Handle voice recording
+   */
+  const handleStartRecording = async () => {
+    try {
+      await startRecording();
+    } catch (error) {
+      console.error('Failed to start recording:', error);
+    }
   };
 
   /**
@@ -62,15 +91,15 @@ export const VoiceChat: React.FC = () => {
           {/* Message content */}
           <div className="text-sm mb-2">{message.content}</div>
           
-                     {/* Audio player for user messages */}
-           {isUser && message.audioUrl && (
-             <audio
-               controls
-               className="w-full mt-2 h-8"
-             >
-               <source src={message.audioUrl} type="audio/webm" />
-             </audio>
-           )}
+          {/* Audio player for user messages */}
+          {isUser && message.audioUrl && (
+            <audio
+              controls
+              className="w-full mt-2 h-8"
+            >
+              <source src={message.audioUrl} type="audio/webm" />
+            </audio>
+          )}
           
           {/* Emotion indicators for assistant messages */}
           {!isUser && message.emotions && message.emotions.length > 0 && (
@@ -100,7 +129,7 @@ export const VoiceChat: React.FC = () => {
     <div className="flex flex-col h-screen bg-black text-white">
       {/* Header */}
       <div className="flex items-center justify-between p-4 bg-gray-900 border-b border-gray-800">
-        <div className="flex items-center">
+        <div className="flex items-center space-x-3">
           <div className="w-12 h-12 flex items-center justify-center bg-gray-800 rounded-xl p-2 border border-gray-700 shadow-lg">
             <Image
               src="/logo.png"
@@ -110,6 +139,32 @@ export const VoiceChat: React.FC = () => {
               className="w-full h-full object-contain"
               priority
             />
+          </div>
+          
+          {/* Connection status */}
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={handleConnectionToggle}
+              className={clsx(
+                'p-2 rounded-lg transition-colors',
+                isConnected
+                  ? 'text-green-400 bg-green-400/20 hover:bg-green-400/30'
+                  : 'text-red-400 bg-red-400/20 hover:bg-red-400/30'
+              )}
+              title={isConnected ? 'Disconnect from Hume EVI' : 'Connect to Hume EVI'}
+            >
+              {isConnected ? (
+                <Wifi className="w-5 h-5" />
+              ) : (
+                <WifiOff className="w-5 h-5" />
+              )}
+            </button>
+            <span className={clsx(
+              'text-xs font-medium',
+              isConnected ? 'text-green-400' : 'text-red-400'
+            )}>
+              {isConnected ? 'Connected' : 'Disconnected'}
+            </span>
           </div>
         </div>
         
@@ -238,7 +293,10 @@ export const VoiceChat: React.FC = () => {
                   Start Your Conversation
                 </h2>
                 <p className="text-gray-400 max-w-md leading-relaxed">
-                  Tap the microphone button below to begin an intelligent voice conversation with AI.
+                  {isConnected 
+                    ? "Connected to Hume AI! Tap the microphone button below to begin an intelligent voice conversation."
+                    : "Connect to Hume AI first by clicking the connection button above, then tap the microphone to start."
+                  }
                 </p>
               </div>
             </div>
@@ -257,19 +315,28 @@ export const VoiceChat: React.FC = () => {
           <VoiceButton
             isRecording={conversationState.isRecording}
             isProcessing={conversationState.isProcessing}
-            onStartRecording={startRecording}
+            onStartRecording={handleStartRecording}
             onStopRecording={stopRecording}
-            disabled={!voiceSettings.microphoneEnabled}
+            disabled={!voiceSettings.microphoneEnabled || !isConnected}
           />
         </div>
 
         {/* Status indicator */}
-        {conversationState.isPlaying && (
-          <div className="flex items-center justify-center mt-4 text-green-400 text-sm">
-            <Volume2 className="w-4 h-4 mr-2" />
-            Playing response...
-          </div>
-        )}
+        <div className="flex flex-col items-center mt-4 space-y-2">
+          {conversationState.isPlaying && (
+            <div className="flex items-center justify-center text-green-400 text-sm">
+              <Volume2 className="w-4 h-4 mr-2" />
+              Playing response...
+            </div>
+          )}
+          
+          {!isConnected && (
+            <div className="flex items-center justify-center text-red-400 text-sm">
+              <WifiOff className="w-4 h-4 mr-2" />
+              Not connected to Hume AI
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

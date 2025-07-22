@@ -2,14 +2,12 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import { 
   ConversationState, 
   VoiceMessage, 
-  AudioRecordingState,
-  VoiceSettings,
-  HumeApiResponse 
+  VoiceSettings
 } from '@/types/hume';
 
 /**
- * Custom hook for managing voice chat functionality with Hume AI
- * Handles audio recording, playback, and real-time conversation processing
+ * Custom hook for managing voice chat functionality with Hume AI EVI
+ * Uses WebSocket connection for real-time speech-to-speech interaction
  */
 export const useVoiceChat = () => {
   // Conversation state management
@@ -28,223 +26,438 @@ export const useVoiceChat = () => {
     autoPlay: true,
   });
 
-  // Audio recording state
-  const [recordingState, setRecordingState] = useState<AudioRecordingState>({
-    mediaRecorder: null,
-    audioChunks: [],
-    stream: null,
-  });
+  // Connection and audio state
+  const [isConnected, setIsConnected] = useState(false);
+  const [accessToken, setAccessToken] = useState<string | null>(null);
+  
+  // Refs for managing audio and connection
+  const socketRef = useRef<WebSocket | null>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioStreamRef = useRef<MediaStream | null>(null);
+  const audioQueueRef = useRef<Blob[]>([]);
+  const currentAudioRef = useRef<HTMLAudioElement | null>(null);
+  const isPlayingRef = useRef(false);
 
-  // Refs for managing audio
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+  /**
+   * Fetch access token for authentication
+   */
+  const fetchAccessToken = useCallback(async () => {
+    try {
+      const response = await fetch('/api/hume/access-token', {
+        method: 'POST',
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        throw new Error(`Failed to fetch access token (${response.status}): ${errorData.error || response.statusText}`);
+      }
+
+      const { accessToken } = await response.json();
+      setAccessToken(accessToken);
+      return accessToken;
+    } catch (error) {
+      console.error('Failed to fetch access token:', error);
+      throw error;
+    }
+  }, []);
+
+  /**
+   * Connect to Hume EVI WebSocket
+   */
+  const connect = useCallback(async () => {
+    try {
+      if (isConnected || socketRef.current) {
+        console.log('Already connected or connecting');
+        return;
+      }
+
+      const token = accessToken || await fetchAccessToken();
+      
+      console.log('Connecting to Hume EVI...');
+      
+      // Create WebSocket connection to Hume EVI
+      let wsUrl = `wss://api.hume.ai/v0/evi/chat?access_token=${token}`;
+      if (process.env.NEXT_PUBLIC_HUME_CONFIG_ID) {
+        wsUrl += `&config_id=${process.env.NEXT_PUBLIC_HUME_CONFIG_ID}`;
+      }
+      
+      const socket = new WebSocket(wsUrl);
+      socketRef.current = socket;
+
+      socket.onopen = () => {
+        console.log('Connected to Hume EVI successfully');
+        setIsConnected(true);
+      };
+
+      // Handle incoming messages
+      socket.onmessage = (event) => {
+        try {
+          const message = JSON.parse(event.data);
+          console.log('Received message:', message.type);
+          
+          switch (message.type) {
+            case 'session_settings':
+              console.log('Session settings received');
+              break;
+              
+            case 'user_message':
+              console.log('User message:', message.message?.content);
+              if (!message.models?.prosody?.interim) {
+                addUserMessage(message.message?.content || 'Voice message');
+              }
+              break;
+              
+            case 'assistant_message':
+              console.log('Assistant message:', message.message?.content);
+              addAssistantMessage(message.message?.content || '', message.models?.prosody?.scores || []);
+              break;
+              
+            case 'audio_output':
+              console.log('Received audio output');
+              handleAudioOutput(message.data);
+              break;
+              
+            case 'user_interruption':
+              console.log('User interruption detected');
+              stopAudioPlayback();
+              break;
+              
+            case 'error':
+              console.error('EVI Error:', message);
+              addErrorMessage(`Error: ${message.message || 'Unknown error'}`);
+              break;
+              
+            default:
+              console.log('Unhandled message type:', message.type);
+          }
+        } catch (error) {
+          console.error('Failed to parse message:', error);
+        }
+      };
+
+      socket.onerror = (error) => {
+        console.error('Socket error:', error);
+        setIsConnected(false);
+        addErrorMessage('Connection error occurred');
+      };
+
+      socket.onclose = () => {
+        console.log('Socket connection closed');
+        setIsConnected(false);
+        cleanup();
+      };
+      
+    } catch (error) {
+      console.error('Failed to connect to Hume EVI:', error);
+      setIsConnected(false);
+      addErrorMessage(`Failed to connect: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw error;
+    }
+  }, [accessToken, fetchAccessToken]);
+
+  /**
+   * Send audio input to EVI
+   */
+  const sendAudioInput = useCallback((base64Audio: string) => {
+    if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
+      const message = {
+        type: 'audio_input',
+        data: base64Audio,
+      };
+      socketRef.current.send(JSON.stringify(message));
+    }
+  }, []);
 
   /**
    * Start recording audio from user's microphone
    */
   const startRecording = useCallback(async () => {
     try {
+      if (!isConnected || !socketRef.current) {
+        await connect();
+      }
+
       if (!voiceSettings.microphoneEnabled) {
         throw new Error('Microphone is disabled');
       }
 
-      // Get user media (microphone access)
+      console.log('Starting audio recording...');
+
+      // Get user media with proper constraints for EVI
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: {
-          sampleRate: 16000,
+          sampleRate: 48000,
           channelCount: 1,
           echoCancellation: true,
           noiseSuppression: true,
+          autoGainControl: true,
         },
       });
 
+      audioStreamRef.current = stream;
+
+      // Create MediaRecorder with WebM format
       const mediaRecorder = new MediaRecorder(stream, {
         mimeType: 'audio/webm;codecs=opus',
       });
 
-      const audioChunks: Blob[] = [];
+      mediaRecorderRef.current = mediaRecorder;
 
-      mediaRecorder.ondataavailable = (event) => {
+      mediaRecorder.ondataavailable = async (event) => {
         if (event.data.size > 0) {
-          audioChunks.push(event.data);
+          try {
+            // Convert blob to base64 for transmission
+            const arrayBuffer = await event.data.arrayBuffer();
+            const base64Audio = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+            
+            // Send audio input to EVI
+            sendAudioInput(base64Audio);
+          } catch (error) {
+            console.error('Failed to send audio data:', error);
+          }
         }
       };
 
-      mediaRecorder.onstop = async () => {
-        const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-        await processAudioMessage(audioBlob);
+      mediaRecorder.onstop = () => {
+        console.log('Recording stopped');
+        setConversationState(prev => ({
+          ...prev,
+          isRecording: false,
+        }));
       };
 
-      mediaRecorder.start();
-
-      setRecordingState({
-        mediaRecorder,
-        audioChunks,
-        stream,
-      });
+      mediaRecorder.start(100); // Send audio chunks every 100ms
 
       setConversationState(prev => ({
         ...prev,
         isRecording: true,
       }));
 
-      console.log('Recording started');
+      console.log('Recording started successfully');
     } catch (error) {
       console.error('Failed to start recording:', error);
+      addErrorMessage(`Failed to start recording: ${error instanceof Error ? error.message : 'Unknown error'}`);
       throw error;
     }
-  }, [voiceSettings.microphoneEnabled]);
+  }, [isConnected, voiceSettings.microphoneEnabled, connect, sendAudioInput]);
 
   /**
    * Stop recording audio
    */
   const stopRecording = useCallback(() => {
     try {
-      if (recordingState.mediaRecorder && recordingState.mediaRecorder.state !== 'inactive') {
-        recordingState.mediaRecorder.stop();
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+        mediaRecorderRef.current.stop();
       }
 
-      if (recordingState.stream) {
-        recordingState.stream.getTracks().forEach(track => track.stop());
+      if (audioStreamRef.current) {
+        audioStreamRef.current.getTracks().forEach(track => track.stop());
+        audioStreamRef.current = null;
       }
-
-      setRecordingState({
-        mediaRecorder: null,
-        audioChunks: [],
-        stream: null,
-      });
 
       setConversationState(prev => ({
         ...prev,
         isRecording: false,
-        isProcessing: true,
       }));
 
-      console.log('Recording stopped');
+      console.log('Recording stopped successfully');
     } catch (error) {
       console.error('Failed to stop recording:', error);
     }
-  }, [recordingState]);
+  }, []);
 
   /**
-   * Process audio message through Hume AI API
+   * Handle incoming audio output from EVI
    */
-  const processAudioMessage = useCallback(async (audioBlob: Blob) => {
-    try {
-      setConversationState(prev => ({
-        ...prev,
-        isProcessing: true,
-      }));
-
-      // Create FormData for multipart upload
-      const formData = new FormData();
-      formData.append('audio', audioBlob, 'recording.webm');
-
-      // Call Hume API through Next.js API route
-      const response = await fetch('/api/hume/voice', {
-        method: 'POST',
-        body: formData,
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-        throw new Error(`API request failed (${response.status}): ${errorData.error || response.statusText}`);
-      }
-
-      const result: HumeApiResponse = await response.json();
-
-      // Add user message to conversation
-      const userMessage: VoiceMessage = {
-        id: `user-${Date.now()}`,
-        type: 'user',
-        content: 'Voice message',
-        timestamp: new Date(),
-        audioUrl: URL.createObjectURL(audioBlob),
-      };
-
-      // Add assistant response to conversation
-      const assistantMessage: VoiceMessage = {
-        id: `assistant-${Date.now()}`,
-        type: 'assistant',
-        content: result.response,
-        timestamp: new Date(),
-        emotions: result.emotions,
-      };
-
-      setConversationState(prev => ({
-        ...prev,
-        messages: [...prev.messages, userMessage, assistantMessage],
-        isProcessing: false,
-      }));
-
-      // Auto-play response if enabled
-      if (voiceSettings.autoPlay && voiceSettings.speakerEnabled) {
-        await playAudioResponse(result.audioData);
-      }
-
-    } catch (error) {
-      console.error('Failed to process audio message:', error);
-      setConversationState(prev => ({
-        ...prev,
-        isProcessing: false,
-      }));
-      
-      // Add error message to conversation for user feedback
-      const errorMessage: VoiceMessage = {
-        id: `error-${Date.now()}`,
-        type: 'assistant',
-        content: `Sorry, I encountered an error: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        timestamp: new Date(),
-      };
-
-      setConversationState(prev => ({
-        ...prev,
-        messages: [...prev.messages, errorMessage],
-      }));
-
-      throw error;
-    }
-  }, [voiceSettings]);
-
-  /**
-   * Play audio response from Hume AI
-   */
-  const playAudioResponse = useCallback(async (audioData: ArrayBuffer) => {
+  const handleAudioOutput = useCallback((base64Audio: string) => {
     try {
       if (!voiceSettings.speakerEnabled) return;
 
-      const audioBlob = new Blob([audioData], { type: 'audio/wav' });
-      const audioUrl = URL.createObjectURL(audioBlob);
+      // Convert base64 to blob
+      const binaryString = atob(base64Audio);
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+      const audioBlob = new Blob([bytes], { type: 'audio/wav' });
 
-      const audio = new Audio(audioUrl);
-      audio.volume = voiceSettings.volume;
+      // Add to audio queue
+      audioQueueRef.current.push(audioBlob);
 
-      audioRef.current = audio;
-
-      setConversationState(prev => ({
-        ...prev,
-        isPlaying: true,
-        currentAudio: audio,
-      }));
-
-      audio.onended = () => {
-        setConversationState(prev => ({
-          ...prev,
-          isPlaying: false,
-          currentAudio: undefined,
-        }));
-        URL.revokeObjectURL(audioUrl);
-      };
-
-      await audio.play();
+      // Start playing if not already playing
+      if (!isPlayingRef.current) {
+        playNextAudio();
+      }
     } catch (error) {
-      console.error('Failed to play audio response:', error);
-      setConversationState(prev => ({
-        ...prev,
-        isPlaying: false,
-        currentAudio: undefined,
-      }));
+      console.error('Failed to handle audio output:', error);
     }
-  }, [voiceSettings]);
+  }, [voiceSettings.speakerEnabled]);
+
+  /**
+   * Play next audio in queue
+   */
+  const playNextAudio = useCallback(() => {
+    if (audioQueueRef.current.length === 0 || isPlayingRef.current) {
+      return;
+    }
+
+    const audioBlob = audioQueueRef.current.shift();
+    if (!audioBlob) return;
+
+    isPlayingRef.current = true;
+    setConversationState(prev => ({ ...prev, isPlaying: true }));
+
+    const audioUrl = URL.createObjectURL(audioBlob);
+    const audio = new Audio(audioUrl);
+    audio.volume = voiceSettings.volume;
+    currentAudioRef.current = audio;
+
+    audio.onended = () => {
+      URL.revokeObjectURL(audioUrl);
+      isPlayingRef.current = false;
+      setConversationState(prev => ({ ...prev, isPlaying: false }));
+      currentAudioRef.current = null;
+
+      // Play next audio in queue
+      if (audioQueueRef.current.length > 0) {
+        playNextAudio();
+      }
+    };
+
+    audio.onerror = (error) => {
+      console.error('Audio playback error:', error);
+      URL.revokeObjectURL(audioUrl);
+      isPlayingRef.current = false;
+      setConversationState(prev => ({ ...prev, isPlaying: false }));
+      currentAudioRef.current = null;
+    };
+
+    audio.play().catch(error => {
+      console.error('Failed to play audio:', error);
+      URL.revokeObjectURL(audioUrl);
+      isPlayingRef.current = false;
+      setConversationState(prev => ({ ...prev, isPlaying: false }));
+      currentAudioRef.current = null;
+    });
+  }, [voiceSettings.volume]);
+
+  /**
+   * Stop audio playback and clear queue
+   */
+  const stopAudioPlayback = useCallback(() => {
+    if (currentAudioRef.current) {
+      currentAudioRef.current.pause();
+      currentAudioRef.current = null;
+    }
+    
+    isPlayingRef.current = false;
+    audioQueueRef.current.length = 0; // Clear the queue
+    
+    setConversationState(prev => ({
+      ...prev,
+      isPlaying: false,
+    }));
+  }, []);
+
+  /**
+   * Add user message to conversation
+   */
+  const addUserMessage = useCallback((content: string) => {
+    const message: VoiceMessage = {
+      id: `user-${Date.now()}`,
+      type: 'user',
+      content,
+      timestamp: new Date(),
+    };
+
+    setConversationState(prev => ({
+      ...prev,
+      messages: [...prev.messages, message],
+    }));
+  }, []);
+
+  /**
+   * Add assistant message to conversation
+   */
+  const addAssistantMessage = useCallback((content: string, emotions: Array<{name: string, score: number}> = []) => {
+    const message: VoiceMessage = {
+      id: `assistant-${Date.now()}`,
+      type: 'assistant',
+      content,
+      timestamp: new Date(),
+      emotions: emotions.map(emotion => ({
+        name: emotion.name,
+        score: emotion.score,
+      })),
+    };
+
+    setConversationState(prev => ({
+      ...prev,
+      messages: [...prev.messages, message],
+    }));
+  }, []);
+
+  /**
+   * Add error message to conversation
+   */
+  const addErrorMessage = useCallback((content: string) => {
+    const message: VoiceMessage = {
+      id: `error-${Date.now()}`,
+      type: 'assistant',
+      content,
+      timestamp: new Date(),
+    };
+
+    setConversationState(prev => ({
+      ...prev,
+      messages: [...prev.messages, message],
+    }));
+  }, []);
+
+  /**
+   * Disconnect from EVI and cleanup
+   */
+  const disconnect = useCallback(() => {
+    try {
+      cleanup();
+      setIsConnected(false);
+      console.log('Disconnected from Hume EVI');
+    } catch (error) {
+      console.error('Error during disconnect:', error);
+    }
+  }, []);
+
+  /**
+   * Cleanup all resources
+   */
+  const cleanup = useCallback(() => {
+    // Stop recording
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      mediaRecorderRef.current.stop();
+    }
+
+    // Stop audio stream
+    if (audioStreamRef.current) {
+      audioStreamRef.current.getTracks().forEach(track => track.stop());
+      audioStreamRef.current = null;
+    }
+
+    // Stop audio playback
+    stopAudioPlayback();
+
+    // Close socket
+    if (socketRef.current) {
+      socketRef.current.close();
+      socketRef.current = null;
+    }
+
+    setConversationState(prev => ({
+      ...prev,
+      isRecording: false,
+      isProcessing: false,
+      isPlaying: false,
+    }));
+  }, [stopAudioPlayback]);
 
   /**
    * Clear conversation history
@@ -266,13 +479,22 @@ export const useVoiceChat = () => {
     }));
   }, []);
 
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      cleanup();
+    };
+  }, [cleanup]);
+
   return {
     conversationState,
     voiceSettings,
+    isConnected,
+    connect,
+    disconnect,
     startRecording,
     stopRecording,
     clearConversation,
     updateVoiceSettings,
-    playAudioResponse,
   };
 }; 
