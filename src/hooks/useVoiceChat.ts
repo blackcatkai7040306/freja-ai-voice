@@ -57,7 +57,7 @@ export const useVoiceChat = () => {
         throw new Error("HUME_API_KEY not found in environment variables")
       }
 
-      const wsUrl = `wss://api.hume.ai/v0/evi/chat?api_key=${apiKey}&config_id=${configId}`
+      const wsUrl = `wss://api.hume.ai/v0/evi/chat?api_key=${apiKey}&config_id=${configId}&verbose_transcription=true`
 
       const socket = new WebSocket(wsUrl)
       socketRef.current = socket
@@ -80,6 +80,11 @@ export const useVoiceChat = () => {
 
             case "user_message":
               console.log("User message:", message.message?.content)
+
+              // Stop audio immediately for any user message (interim or final)
+              stopAudioPlayback()
+
+              // Only add to conversation if it's not interim
               if (!message.models?.prosody?.interim) {
                 addUserMessage(message.message?.content || "Voice message")
               }
@@ -165,21 +170,6 @@ export const useVoiceChat = () => {
   }, [])
 
   /**
-   * Convert blob to base64 using FileReader (more efficient)
-   */
-  const blobToBase64 = useCallback((blob: Blob): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader()
-      reader.onload = () => {
-        const base64 = (reader.result as string).split(",")[1]
-        resolve(base64)
-      }
-      reader.onerror = reject
-      reader.readAsDataURL(blob)
-    })
-  }, [])
-
-  /**
    * Start recording audio from user's microphone
    */
   const startRecording = useCallback(async () => {
@@ -221,8 +211,11 @@ export const useVoiceChat = () => {
       mediaRecorder.ondataavailable = async (event) => {
         if (event.data.size > 0) {
           try {
-            // Use improved base64 conversion
-            const base64Audio = await blobToBase64(event.data)
+            // Convert blob to base64 using the method recommended by Hume
+            const arrayBuffer = await event.data.arrayBuffer()
+            const base64Audio = btoa(
+              String.fromCharCode(...new Uint8Array(arrayBuffer))
+            )
             sendAudioInput(base64Audio)
           } catch (error) {
             console.error("Failed to send audio data:", error)
@@ -238,7 +231,8 @@ export const useVoiceChat = () => {
         }))
       }
 
-      mediaRecorder.start(250) // Reduce frequency to prevent buffer overflow
+      // ✅ Fast chunking for smooth streaming
+      mediaRecorder.start(100) // 100ms as recommended
 
       setConversationState((prev) => ({
         ...prev,
@@ -260,7 +254,6 @@ export const useVoiceChat = () => {
     voiceSettings.microphoneEnabled,
     sendAudioInput,
     initializeAudioContext,
-    blobToBase64,
   ])
 
   /**
@@ -299,10 +292,10 @@ export const useVoiceChat = () => {
       try {
         if (!voiceSettings.speakerEnabled) return
 
-        // Limit audio queue size to prevent memory issues
-        if (audioQueueRef.current.length > 10) {
-          console.warn("Audio queue too large, clearing oldest entries")
-          audioQueueRef.current = audioQueueRef.current.slice(-5)
+        // Limit audio queue size to prevent memory issues and maintain smooth streaming
+        if (audioQueueRef.current.length > 5) {
+          console.warn("Audio queue getting large, clearing oldest entries")
+          audioQueueRef.current = audioQueueRef.current.slice(-3)
         }
 
         // Convert base64 to blob with proper audio type
@@ -311,12 +304,12 @@ export const useVoiceChat = () => {
         for (let i = 0; i < binaryString.length; i++) {
           bytes[i] = binaryString.charCodeAt(i)
         }
-        const audioBlob = new Blob([bytes], { type: "audio/mpeg" })
+        const audioBlob = new Blob([bytes], { type: "audio/wav" })
 
         // Add to audio queue
         audioQueueRef.current.push(audioBlob)
 
-        // Start playing if not already playing
+        // Start playing immediately if not already playing (for smooth streaming)
         if (!isPlayingRef.current) {
           playNextAudio()
         }
@@ -344,13 +337,12 @@ export const useVoiceChat = () => {
     const audioUrl = URL.createObjectURL(audioBlob)
     const audio = new Audio(audioUrl)
 
-    // Normalize volume to prevent clipping (max 0.8 to leave headroom)
-    const normalizedVolume = Math.min(voiceSettings.volume * 0.8, 0.8)
-    audio.volume = normalizedVolume
+    // Set volume with slight normalization for consistent playback
+    audio.volume = Math.min(voiceSettings.volume, 0.9)
 
-    // Add crossfade and anti-aliasing
-    audio.crossOrigin = "anonymous"
-    audio.preload = "auto"
+    // Optimize for streaming playback
+    audio.preload = "none" // Don't preload for streaming
+    audio.autoplay = false
 
     currentAudioRef.current = audio
 
@@ -360,12 +352,10 @@ export const useVoiceChat = () => {
       setConversationState((prev) => ({ ...prev, isPlaying: false }))
       currentAudioRef.current = null
 
-      // Small delay before playing next to prevent overlap
-      setTimeout(() => {
-        if (audioQueueRef.current.length > 0) {
-          playNextAudio()
-        }
-      }, 50)
+      // Immediately play next audio to prevent gaps
+      if (audioQueueRef.current.length > 0) {
+        playNextAudio()
+      }
     }
 
     audio.onerror = (error) => {
@@ -375,12 +365,10 @@ export const useVoiceChat = () => {
       setConversationState((prev) => ({ ...prev, isPlaying: false }))
       currentAudioRef.current = null
 
-      // Try to play next audio even if current one failed
-      setTimeout(() => {
-        if (audioQueueRef.current.length > 0) {
-          playNextAudio()
-        }
-      }, 100)
+      // Immediately try to play next audio
+      if (audioQueueRef.current.length > 0) {
+        playNextAudio()
+      }
     }
 
     audio.play().catch((error) => {
@@ -390,12 +378,10 @@ export const useVoiceChat = () => {
       setConversationState((prev) => ({ ...prev, isPlaying: false }))
       currentAudioRef.current = null
 
-      // Try to play next audio even if current one failed
-      setTimeout(() => {
-        if (audioQueueRef.current.length > 0) {
-          playNextAudio()
-        }
-      }, 100)
+      // Immediately try to play next audio
+      if (audioQueueRef.current.length > 0) {
+        playNextAudio()
+      }
     })
   }, [voiceSettings.volume])
 
