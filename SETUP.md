@@ -73,16 +73,16 @@ vercel --prod
 ### Local Development
 
 1. **Install dependencies**:
-```bash
-npm install
-```
+   ```bash
+   npm install
+   ```
 
 2. **Set up environment variables** (see above)
 
 3. **Run the development server**:
-```bash
-npm run dev
-```
+   ```bash
+   npm run dev
+   ```
 
 4. **Open your browser**:
    - Navigate to `http://localhost:3000`

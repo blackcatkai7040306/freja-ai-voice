@@ -56,9 +56,8 @@ export const useVoiceChat = () => {
       if (!apiKey) {
         throw new Error('HUME_API_KEY not found in environment variables');
       }
-
-      // Enable verbose transcription for faster interruption handling
-      const wsUrl = `wss://api.hume.ai/v0/evi/chat?api_key=${apiKey}&config_id=${configId}&verbose_transcription=true`;
+      
+      const wsUrl = `wss://api.hume.ai/v0/evi/chat?api_key=${apiKey}&config_id=${configId}`;
       
       const socket = new WebSocket(wsUrl);
       socketRef.current = socket;
@@ -66,17 +65,6 @@ export const useVoiceChat = () => {
       socket.onopen = () => {
         console.log('Connected to Hume EVI successfully with config:', configId);
         setIsConnected(true);
-        
-        // Send initial session settings for optimized performance
-        const sessionSettings = {
-          type: 'session_settings',
-          audio: {
-            encoding: 'webm',
-            channels: 1,
-            sample_rate: 48000
-          }
-        };
-        socket.send(JSON.stringify(sessionSettings));
       };
 
       // Handle incoming messages
@@ -92,37 +80,14 @@ export const useVoiceChat = () => {
               
             case 'user_message':
               console.log('User message:', message.message?.content);
-              // Process both interim and final messages for faster response
-              if (message.models?.prosody?.interim) {
-                // Stop audio playback immediately on interim message for faster interruption
-                stopAudioPlayback();
-              } else {
+              if (!message.models?.prosody?.interim) {
                 addUserMessage(message.message?.content || 'Voice message');
               }
               break;
               
             case 'assistant_message':
               console.log('Assistant message:', message.message?.content);
-              addAssistantMessage(message.message?.content || '', []);
-              break;
-              
-            case 'assistant_prosody':
-              console.log('Assistant prosody received');
-              // Handle prosody scores separately for EVI 3 (faster processing)
-              if (message.models?.prosody?.scores) {
-                // Update the last assistant message with emotion scores
-                setConversationState(prev => {
-                  const messages = [...prev.messages];
-                  const lastMessage = messages[messages.length - 1];
-                  if (lastMessage && lastMessage.type === 'assistant' && lastMessage.id === message.id) {
-                    lastMessage.emotions = Object.entries(message.models.prosody.scores)
-                      .map(([name, score]) => ({ name, score: score as number }))
-                      .sort((a, b) => b.score - a.score)
-                      .slice(0, 3);
-                  }
-                  return { ...prev, messages };
-                });
-              }
+              addAssistantMessage(message.message?.content || '', message.models?.prosody?.scores || []);
               break;
               
             case 'audio_output':
@@ -209,10 +174,9 @@ export const useVoiceChat = () => {
 
       audioStreamRef.current = stream;
 
-      // Create MediaRecorder with optimized settings for low latency
+      // Create MediaRecorder with WebM format
       const mediaRecorder = new MediaRecorder(stream, {
         mimeType: 'audio/webm;codecs=opus',
-        audioBitsPerSecond: 128000, // Optimize for faster processing
       });
 
       mediaRecorderRef.current = mediaRecorder;
@@ -224,7 +188,7 @@ export const useVoiceChat = () => {
             const arrayBuffer = await event.data.arrayBuffer();
             const base64Audio = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
             
-            // Send audio input to EVI immediately
+            // Send audio input to EVI
             sendAudioInput(base64Audio);
           } catch (error) {
             console.error('Failed to send audio data:', error);
@@ -240,7 +204,7 @@ export const useVoiceChat = () => {
         }));
       };
 
-      mediaRecorder.start(50); // Reduce chunk size from 100ms to 50ms for faster processing
+      mediaRecorder.start(100); // Send audio chunks every 100ms
 
       setConversationState(prev => ({
         ...prev,
@@ -298,10 +262,9 @@ export const useVoiceChat = () => {
       // Add to audio queue
       audioQueueRef.current.push(audioBlob);
 
-      // Start playing immediately with minimal delay
-      if (!isPlayingRef.current && audioQueueRef.current.length === 1) {
-        // Use setTimeout with minimal delay to ensure smooth playback
-        setTimeout(() => playNextAudio(), 10);
+      // Start playing if not already playing
+      if (!isPlayingRef.current) {
+        playNextAudio();
       }
     } catch (error) {
       console.error('Failed to handle audio output:', error);
@@ -309,7 +272,7 @@ export const useVoiceChat = () => {
   }, [voiceSettings.speakerEnabled]);
 
   /**
-   * Play next audio in queue with optimized performance
+   * Play next audio in queue
    */
   const playNextAudio = useCallback(() => {
     if (audioQueueRef.current.length === 0 || isPlayingRef.current) {
@@ -324,36 +287,35 @@ export const useVoiceChat = () => {
 
     const audioUrl = URL.createObjectURL(audioBlob);
     const audio = new Audio(audioUrl);
-      
-    // Optimize audio settings for faster playback
     audio.volume = voiceSettings.volume;
-    audio.preload = 'auto';
-    audio.autoplay = false;
-    
     currentAudioRef.current = audio;
 
-    const cleanup = () => {
+    audio.onended = () => {
       URL.revokeObjectURL(audioUrl);
       isPlayingRef.current = false;
       setConversationState(prev => ({ ...prev, isPlaying: false }));
       currentAudioRef.current = null;
 
-      // Immediately play next audio in queue if available
+      // Play next audio in queue
       if (audioQueueRef.current.length > 0) {
-        setTimeout(() => playNextAudio(), 50); // Minimal gap between audio segments
+        playNextAudio();
       }
     };
 
-    audio.onended = cleanup;
     audio.onerror = (error) => {
       console.error('Audio playback error:', error);
-      cleanup();
+      URL.revokeObjectURL(audioUrl);
+      isPlayingRef.current = false;
+      setConversationState(prev => ({ ...prev, isPlaying: false }));
+      currentAudioRef.current = null;
     };
 
-    // Use async play with error handling for faster response
     audio.play().catch(error => {
       console.error('Failed to play audio:', error);
-      cleanup();
+      URL.revokeObjectURL(audioUrl);
+      isPlayingRef.current = false;
+      setConversationState(prev => ({ ...prev, isPlaying: false }));
+      currentAudioRef.current = null;
     });
   }, [voiceSettings.volume]);
 
@@ -380,10 +342,10 @@ export const useVoiceChat = () => {
    */
   const addUserMessage = useCallback((content: string) => {
     const message: VoiceMessage = {
-        id: `user-${Date.now()}`,
-        type: 'user',
+      id: `user-${Date.now()}`,
+      type: 'user',
       content,
-        timestamp: new Date(),
+      timestamp: new Date(),
     };
 
     setConversationState(prev => ({
@@ -397,18 +359,18 @@ export const useVoiceChat = () => {
    */
   const addAssistantMessage = useCallback((content: string, emotions: Array<{name: string, score: number}> = []) => {
     const message: VoiceMessage = {
-        id: `assistant-${Date.now()}`,
-        type: 'assistant',
+      id: `assistant-${Date.now()}`,
+      type: 'assistant',
       content,
-        timestamp: new Date(),
+      timestamp: new Date(),
       emotions: emotions.map(emotion => ({
         name: emotion.name,
         score: emotion.score,
       })),
-      };
+    };
 
-      setConversationState(prev => ({
-        ...prev,
+    setConversationState(prev => ({
+      ...prev,
       messages: [...prev.messages, message],
     }));
   }, []);
@@ -424,10 +386,10 @@ export const useVoiceChat = () => {
       timestamp: new Date(),
     };
 
-      setConversationState(prev => ({
-        ...prev,
+    setConversationState(prev => ({
+      ...prev,
       messages: [...prev.messages, message],
-      }));
+    }));
   }, []);
 
   /**
@@ -467,12 +429,12 @@ export const useVoiceChat = () => {
       socketRef.current = null;
     }
 
-      setConversationState(prev => ({
-        ...prev,
+    setConversationState(prev => ({
+      ...prev,
       isRecording: false,
       isProcessing: false,
-        isPlaying: false,
-      }));
+      isPlaying: false,
+    }));
   }, [stopAudioPlayback]);
 
   /**

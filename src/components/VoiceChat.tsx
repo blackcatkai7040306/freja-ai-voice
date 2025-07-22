@@ -78,14 +78,14 @@ export const VoiceChat: React.FC = () => {
       <div
         key={message.id}
         className={clsx(
-          'flex w-full mb-4 items-start space-x-3',
+          'flex w-full mb-3 md:mb-4 items-start space-x-2 md:space-x-3',
           isUser ? 'justify-end' : 'justify-start'
         )}
       >
         {/* Assistant Avatar (left side) */}
         {!isUser && (
           <div className="flex flex-col items-center space-y-1">
-            <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-purple-400/50 shadow-lg backdrop-blur-sm bg-gray-800/50">
+            <div className="w-8 h-8 md:w-10 md:h-10 rounded-full overflow-hidden border-2 border-purple-400/50 shadow-lg backdrop-blur-sm bg-gray-800/50">
               <Image
                 src="/chatuser.png"
                 alt="Freja AI Avatar"
@@ -102,24 +102,24 @@ export const VoiceChat: React.FC = () => {
                   }
                 }}
               />
-              <div className="w-full h-full bg-gradient-to-br from-purple-500 to-pink-500 items-center justify-center text-white text-sm font-bold hidden">
+              <div className="w-full h-full bg-gradient-to-br from-purple-500 to-pink-500 items-center justify-center text-white text-xs font-bold hidden">
                 AI
               </div>
             </div>
-            <span className="text-xs text-gray-400 font-medium">{assistantName}</span>
+            <span className="text-xs text-gray-400 font-medium hidden sm:block">{assistantName}</span>
           </div>
         )}
 
         <div
           className={clsx(
-            'max-w-xs lg:max-w-md px-4 py-3 rounded-2xl shadow-lg backdrop-blur-sm',
+            'max-w-[280px] sm:max-w-xs lg:max-w-md px-3 md:px-4 py-2 md:py-3 rounded-2xl shadow-lg backdrop-blur-sm',
             isUser
               ? 'bg-gradient-to-br from-blue-500/90 to-purple-600/90 text-white border border-blue-400/30'
               : 'bg-gray-800/90 text-gray-100 border border-gray-600/50'
           )}
         >
           {/* Message content */}
-          <div className="text-sm mb-2 font-medium">{message.content}</div>
+          <div className="text-sm md:text-base mb-1 md:mb-2 font-medium leading-relaxed">{message.content}</div>
           
           {/* Audio player for user messages */}
           {isUser && message.audioUrl && (
@@ -140,7 +140,8 @@ export const VoiceChat: React.FC = () => {
                   className="px-2 py-1 bg-gray-700/70 backdrop-blur-sm rounded-full text-xs text-gray-200 border border-gray-600/50"
                   title={`${emotion.name}: ${(emotion.score * 100).toFixed(0)}%`}
                 >
-                  {emotion.name} {(emotion.score * 100).toFixed(0)}%
+                  <span className="hidden sm:inline">{emotion.name} </span>
+                  {(emotion.score * 100).toFixed(0)}%
                 </span>
               ))}
             </div>
@@ -155,10 +156,10 @@ export const VoiceChat: React.FC = () => {
         {/* User Avatar (right side) */}
         {isUser && (
           <div className="flex flex-col items-center space-y-1">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 border-2 border-blue-400/50 shadow-lg backdrop-blur-sm flex items-center justify-center">
-              <span className="text-white text-sm font-bold">R</span>
+            <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 border-2 border-blue-400/50 shadow-lg backdrop-blur-sm flex items-center justify-center">
+              <span className="text-white text-xs md:text-sm font-bold">R</span>
             </div>
-            <span className="text-xs text-gray-400 font-medium">{userName}</span>
+            <span className="text-xs text-gray-400 font-medium hidden sm:block">{userName}</span>
           </div>
         )}
       </div>
@@ -173,29 +174,23 @@ export const VoiceChat: React.FC = () => {
         style={{
           backgroundImage: 'url(/background.png)',
           backgroundSize: 'cover',
-          backgroundPosition: 'center top', // Focus on upper portion where face is likely located
-          // Alternative positioning options to try:
-          // backgroundPosition: 'center 20%',     // Face slightly below top
-          // backgroundPosition: 'center 30%',     // Face in upper-middle area
-          // backgroundPosition: '40% 20%',        // Face positioned left-of-center, upper area
-          // backgroundPosition: '60% 20%',        // Face positioned right-of-center, upper area
-          // backgroundPosition: 'center center',  // Standard center positioning
+          backgroundPosition: 'center top', // Focus on the top area where face likely is
           backgroundRepeat: 'no-repeat',
           backgroundAttachment: 'fixed',
-          filter: 'blur(2px)',
-          transform: 'scale(1.1)', // Slightly larger scale to better frame the face
+          filter: 'blur(1.5px)', // Slightly less blur to show more detail
+          transform: 'scale(1.02)', // Less scaling to maintain image quality
         }}
       />
       
       {/* Overlay to ensure text readability */}
-      <div className="absolute inset-0 bg-black/50" />
+      <div className="absolute inset-0 bg-black/45" />
       
       {/* Content with relative positioning to appear above background */}
       <div className="relative z-10 flex flex-col h-full">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 bg-gray-900/90 backdrop-blur-sm border-b border-gray-800/50">
-          <div className="flex items-center space-x-3">
-            <div className="w-12 h-12 flex items-center justify-center bg-gray-800/90 backdrop-blur-sm rounded-xl p-2 border border-gray-700 shadow-lg">
+        <div className="flex items-center justify-between p-3 md:p-4 bg-gray-900/90 backdrop-blur-sm border-b border-gray-800/50">
+          <div className="flex items-center space-x-2 md:space-x-3">
+            <div className="w-10 h-10 md:w-12 md:h-12 flex items-center justify-center bg-gray-800/90 backdrop-blur-sm rounded-xl p-2 border border-gray-700 shadow-lg">
               <Image
                 src="/logo.png"
                 alt="Freja AI Logo"
@@ -211,7 +206,7 @@ export const VoiceChat: React.FC = () => {
               <button
                 onClick={handleConnectionToggle}
                 className={clsx(
-                  'p-2 rounded-lg transition-colors backdrop-blur-sm',
+                  'p-1.5 md:p-2 rounded-lg transition-colors backdrop-blur-sm',
                   isConnected
                     ? 'text-green-400 bg-green-400/20 hover:bg-green-400/30'
                     : 'text-red-400 bg-red-400/20 hover:bg-red-400/30'
@@ -219,13 +214,13 @@ export const VoiceChat: React.FC = () => {
                 title={isConnected ? 'Disconnect from Hume EVI' : 'Connect to Hume EVI'}
               >
                 {isConnected ? (
-                  <Wifi className="w-5 h-5" />
+                  <Wifi className="w-4 h-4 md:w-5 md:h-5" />
                 ) : (
-                  <WifiOff className="w-5 h-5" />
+                  <WifiOff className="w-4 h-4 md:w-5 md:h-5" />
                 )}
               </button>
               <span className={clsx(
-                'text-xs font-medium',
+                'text-xs font-medium hidden sm:block',
                 isConnected ? 'text-green-400' : 'text-red-400'
               )}>
                 {isConnected ? 'Connected' : 'Disconnected'}
@@ -233,34 +228,34 @@ export const VoiceChat: React.FC = () => {
             </div>
           </div>
           
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-1 md:space-x-2">
             {/* Clear conversation button */}
             <button
               onClick={clearConversation}
               disabled={conversationState.messages.length === 0}
-              className="p-2 text-gray-400 hover:text-white hover:bg-gray-800/50 backdrop-blur-sm rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="p-1.5 md:p-2 text-gray-400 hover:text-white hover:bg-gray-800/50 backdrop-blur-sm rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               title="Clear conversation"
             >
-              <Trash2 className="w-5 h-5" />
+              <Trash2 className="w-4 h-4 md:w-5 md:h-5" />
             </button>
             
             {/* Settings button */}
             <button
               onClick={toggleSettings}
-              className="p-2 text-gray-400 hover:text-white hover:bg-gray-800/50 backdrop-blur-sm rounded-lg transition-colors"
+              className="p-1.5 md:p-2 text-gray-400 hover:text-white hover:bg-gray-800/50 backdrop-blur-sm rounded-lg transition-colors"
               title="Settings"
             >
-              <Settings className="w-5 h-5" />
+              <Settings className="w-4 h-4 md:w-5 md:h-5" />
             </button>
           </div>
         </div>
 
         {/* Settings panel */}
         {showSettings && (
-          <div className="bg-gray-900/90 backdrop-blur-sm border-b border-gray-800/50 p-4 space-y-4">
+          <div className="bg-gray-900/90 backdrop-blur-sm border-b border-gray-800/50 p-3 md:p-4 space-y-3 md:space-y-4">
             <h3 className="text-sm font-semibold text-gray-300">Voice Settings</h3>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-3 md:gap-4">
               {/* Microphone toggle */}
               <div className="flex items-center justify-between">
                 <span className="text-sm text-gray-300">Microphone</span>
@@ -269,16 +264,16 @@ export const VoiceChat: React.FC = () => {
                     microphoneEnabled: !voiceSettings.microphoneEnabled 
                   })}
                   className={clsx(
-                    'p-2 rounded-lg transition-colors backdrop-blur-sm',
+                    'p-1.5 md:p-2 rounded-lg transition-colors backdrop-blur-sm',
                     voiceSettings.microphoneEnabled
                       ? 'text-green-400 bg-green-400/20'
                       : 'text-red-400 bg-red-400/20'
                   )}
                 >
                   {voiceSettings.microphoneEnabled ? (
-                    <Mic className="w-5 h-5" />
+                    <Mic className="w-4 h-4 md:w-5 md:h-5" />
                   ) : (
-                    <MicOff className="w-5 h-5" />
+                    <MicOff className="w-4 h-4 md:w-5 md:h-5" />
                   )}
                 </button>
               </div>
@@ -291,16 +286,16 @@ export const VoiceChat: React.FC = () => {
                     speakerEnabled: !voiceSettings.speakerEnabled 
                   })}
                   className={clsx(
-                    'p-2 rounded-lg transition-colors backdrop-blur-sm',
+                    'p-1.5 md:p-2 rounded-lg transition-colors backdrop-blur-sm',
                     voiceSettings.speakerEnabled
                       ? 'text-green-400 bg-green-400/20'
                       : 'text-red-400 bg-red-400/20'
                   )}
                 >
                   {voiceSettings.speakerEnabled ? (
-                    <Volume2 className="w-5 h-5" />
+                    <Volume2 className="w-4 h-4 md:w-5 md:h-5" />
                   ) : (
-                    <VolumeX className="w-5 h-5" />
+                    <VolumeX className="w-4 h-4 md:w-5 md:h-5" />
                   )}
                 </button>
               </div>
@@ -346,18 +341,18 @@ export const VoiceChat: React.FC = () => {
         )}
 
         {/* Messages area */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        <div className="flex-1 overflow-y-auto p-3 md:p-4 space-y-4">
           {conversationState.messages.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full text-center space-y-6">
-              <div className="space-y-4">
-                <div className="w-24 h-24 bg-gradient-to-br from-blue-500/20 to-purple-600/20 backdrop-blur-sm rounded-3xl flex items-center justify-center border border-gray-700/50">
-                  <div className="text-4xl">🎙️</div>
+            <div className="flex flex-col items-center justify-center h-full text-center space-y-4 md:space-y-6 px-4">
+              <div className="space-y-3 md:space-y-4">
+                <div className="w-20 h-20 md:w-24 md:h-24 bg-gradient-to-br from-blue-500/20 to-purple-600/20 backdrop-blur-sm rounded-3xl flex items-center justify-center border border-gray-700/50">
+                  <div className="text-3xl md:text-4xl">🎙️</div>
                 </div>
                 <div className="space-y-2">
-                  <h2 className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+                  <h2 className="text-xl md:text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
                     Welcome, Robert!
                   </h2>
-                  <p className="text-gray-200 max-w-md leading-relaxed backdrop-blur-sm bg-black/20 rounded-lg p-4">
+                  <p className="text-gray-200 max-w-sm md:max-w-md leading-relaxed backdrop-blur-sm bg-black/20 rounded-lg p-3 md:p-4 text-sm md:text-base">
                     {isConnected 
                       ? "Connected to Freja AI! Tap the microphone button below to begin our conversation."
                       : "Connect to Freja AI first by clicking the connection button above, then tap the microphone to start chatting."
@@ -375,7 +370,7 @@ export const VoiceChat: React.FC = () => {
         </div>
 
         {/* Voice input area */}
-        <div className="p-6 bg-gray-900/90 backdrop-blur-sm border-t border-gray-800/50">
+        <div className="p-4 md:p-6 bg-gray-900/90 backdrop-blur-sm border-t border-gray-800/50">
           <div className="flex justify-center">
             <VoiceButton
               isRecording={conversationState.isRecording}
@@ -387,18 +382,20 @@ export const VoiceChat: React.FC = () => {
           </div>
 
           {/* Status indicator */}
-          <div className="flex flex-col items-center mt-4 space-y-2">
+          <div className="flex flex-col items-center mt-3 md:mt-4 space-y-2">
             {conversationState.isPlaying && (
               <div className="flex items-center justify-center text-green-400 text-sm bg-black/20 backdrop-blur-sm rounded-lg px-3 py-2">
                 <Volume2 className="w-4 h-4 mr-2" />
-                Playing response...
+                <span className="hidden sm:inline">Playing response...</span>
+                <span className="sm:hidden">Playing...</span>
               </div>
             )}
             
             {!isConnected && (
               <div className="flex items-center justify-center text-red-400 text-sm bg-black/20 backdrop-blur-sm rounded-lg px-3 py-2">
                 <WifiOff className="w-4 h-4 mr-2" />
-                Not connected to Hume AI
+                <span className="hidden sm:inline">Not connected to Hume AI</span>
+                <span className="sm:hidden">Not connected</span>
               </div>
             )}
           </div>
