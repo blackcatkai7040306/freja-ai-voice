@@ -173,11 +173,17 @@ export const VoiceChat: React.FC = () => {
         style={{
           backgroundImage: 'url(/background.png)',
           backgroundSize: 'cover',
-          backgroundPosition: 'center',
+          backgroundPosition: 'center top', // Focus on upper portion where face is likely located
+          // Alternative positioning options to try:
+          // backgroundPosition: 'center 20%',     // Face slightly below top
+          // backgroundPosition: 'center 30%',     // Face in upper-middle area
+          // backgroundPosition: '40% 20%',        // Face positioned left-of-center, upper area
+          // backgroundPosition: '60% 20%',        // Face positioned right-of-center, upper area
+          // backgroundPosition: 'center center',  // Standard center positioning
           backgroundRepeat: 'no-repeat',
           backgroundAttachment: 'fixed',
           filter: 'blur(2px)',
-          transform: 'scale(1.05)', // Slightly scale up to avoid blur edges
+          transform: 'scale(1.1)', // Slightly larger scale to better frame the face
         }}
       />
       
